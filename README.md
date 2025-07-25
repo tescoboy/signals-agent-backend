@@ -56,10 +56,9 @@ The fastest way to try the demo:
    ```bash
    uv run python database.py
    ```
-6. Start the web demo:
+6. Try the interactive demo:
    ```bash
-   uv run python demo_web.py
-   # Open the forwarded port 8000 in your browser
+   uv run python client.py
    ```
 
 ### Option 2: Local Installation
@@ -90,39 +89,26 @@ This agent implements the following tools from the Audience Activation Protocol:
 - `activate_audience`: Activate audiences for specific platforms/accounts  
 - `check_audience_status`: Check deployment status of audiences
 
-## Live Demo
+## 🚀 Try the Live Demo
 
-Try the live demo at: **[Live Demo URL - TBD]**
+**Quick Start**: Click the green **"Code"** button above → **"Codespaces"** → **"Create codespace on main"**
 
-Or run locally:
+Once in Codespaces (or locally), the demo uses the interactive MCP client:
 
 ```bash
-# Start web demo
-uv run python demo_web.py
-# Open http://localhost:8000
+# Interactive mode - full demo experience
+uv run python client.py
+
+# Quick search mode  
+uv run python client.py --prompt "BMW luxury automotive targeting"
+
+# Limit results (default is 5)
+uv run python client.py --prompt --limit 10 "BMW luxury automotive targeting"
 ```
 
 ## Testing
 
-Test the client interactively:
-
-```bash
-uv run python client.py
-```
-
-Quick search with prompt:
-
-```bash
-uv run python client.py --prompt "BMW luxury automotive targeting"
-```
-
-Limit results (default is 5):
-
-```bash
-uv run python client.py --prompt --limit 10 "BMW luxury automotive targeting"
-```
-
-Run the test suite to validate functionality:
+Run the test suite:
 
 ```bash
 uv run python -m unittest test_main.py

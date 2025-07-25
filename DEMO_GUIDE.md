@@ -17,20 +17,20 @@ Welcome to the Audience Activation Protocol live demo! This guide will walk you 
    uv run python database.py
    ```
 
-## 🌐 Web Demo (Recommended)
+## 💻 Interactive Client Demo (Recommended)
 
-Start the web interface for the easiest experience:
+The best way to experience the demo is through the interactive MCP client:
 
 ```bash
-uv run python demo_web.py
+uv run python client.py
 ```
 
-Then click the "Ports" tab in VS Code and open the forwarded port 8000. You'll see a web form where you can:
+This opens a beautiful command-line interface where you can:
 
 - Enter natural language audience queries
-- See AI-ranked results with explanations  
-- View custom segment proposals with activation IDs
-- Test one-click activation simulation
+- See AI-ranked results in attractive tables
+- View custom segment proposals with activation IDs  
+- Test the full activation lifecycle
 
 ### Example Queries to Try:
 - "Luxury automotive buyers interested in BMW and Mercedes"
@@ -38,35 +38,25 @@ Then click the "Ports" tab in VS Code and open the forwarded port 8000. You'll s
 - "Technology enthusiasts who buy expensive gadgets"
 - "Parents shopping for children's products"
 
-## 💻 Command Line Demo
+## 💻 Quick Search Mode
 
-For developers who prefer the terminal:
+For one-off queries, use the prompt mode:
 
 ```bash
-uv run python client.py
+uv run python client.py --prompt "luxury automotive targeting"
 ```
 
-This opens an interactive client where you can:
+This gives you instant results without the interactive menu.
 
-### 1. Discover Audiences
-```
-Command: discover
-Query: "luxury automotive targeting"
-```
+### Interactive Commands
 
-### 2. Activate Segments
-```
-Command: activate  
-Segment ID: [copy from discovery results or custom proposals]
-Platform: index-exchange
-```
+When you run `uv run python client.py`, you'll see a menu with these commands:
 
-### 3. Check Status
-```
-Command: status
-Segment ID: [same ID you activated]
-Platform: index-exchange
-```
+- **discover**: Search for audiences with natural language
+- **activate**: Activate a segment for a platform  
+- **status**: Check deployment status
+- **help**: Show command help
+- **quit**: Exit the demo
 
 ## 🎯 What You'll See
 
@@ -98,12 +88,12 @@ The most interesting feature is custom segment creation:
 ## 🛠️ Technical Details
 
 This demo showcases:
-- **MCP Protocol**: Full Model Context Protocol implementation
-- **FastMCP Framework**: Modern Python MCP server
+- **MCP Protocol**: Full Model Context Protocol implementation via interactive client
+- **FastMCP Framework**: Modern Python MCP server  
 - **Pydantic Schemas**: Type-safe request/response validation
 - **SQLite Database**: Real audience segment data
 - **Google Gemini**: AI-powered ranking and proposals
-- **Rich CLI**: Beautiful command-line interface
+- **Rich CLI**: Beautiful command-line tables and interface
 
 ## 📚 Learn More
 
