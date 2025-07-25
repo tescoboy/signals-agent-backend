@@ -67,15 +67,22 @@ async def discover_audiences(client: Client):
     # Get filters
     max_cpm = Prompt.ask("Maximum CPM (optional)", default="")
     data_provider = Prompt.ask("Data provider filter (optional)", default="")
+    max_results = Prompt.ask("Number of results", default="5")
     
     # Build request
+    try:
+        max_results_int = int(max_results)
+    except ValueError:
+        max_results_int = 5
+        console.print("[yellow]Invalid number, using default of 5[/yellow]")
+    
     request_data = {
         "audience_spec": audience_spec,
         "deliver_to": {
             "platforms": platforms,
             "countries": ["US"]
         },
-        "max_results": 10
+        "max_results": max_results_int
     }
     
     filters = {}
@@ -95,50 +102,102 @@ async def discover_audiences(client: Client):
     try:
         console.print("\n[dim]Searching for audiences...[/dim]")
         result = await client.call_tool("get_audiences", request_data)
-        response = result.data.model_dump() if hasattr(result, 'data') else result
+        # Convert response to dict for easier handling
+        if hasattr(result, 'model_dump'):
+            response = result.model_dump()
+        elif hasattr(result, 'dict'):
+            response = result.dict()
+        elif isinstance(result, dict):
+            response = result
+        else:
+            # Fallback: try to access common attributes
+            response = {
+                "audiences": getattr(result, 'audiences', []),
+                "custom_segment_proposals": getattr(result, 'custom_segment_proposals', [])
+            }
         
         if not response.get("audiences"):
             console.print("[yellow]No audiences found matching your criteria[/yellow]")
             return
         
-        # Display results
-        console.print(f"\n[bold green]Found {len(response['audiences'])} audiences:[/bold green]")
+        # Display results in an attractive table format
+        console.print(f"\n[bold green]🎯 Found {len(response['audiences'])} audiences[/bold green]")
+        
+        # Create main results table
+        table = Table(show_header=True, header_style="bold cyan", box=None)
+        table.add_column("#", style="dim", width=3)
+        table.add_column("Audience", style="bold", min_width=20)
+        table.add_column("Provider", style="blue", width=12)
+        table.add_column("Coverage", justify="right", width=8)
+        table.add_column("CPM", justify="right", width=8)
+        table.add_column("Status", width=12)
         
         for i, audience in enumerate(response["audiences"], 1):
-            console.print(f"\n[bold]{i}. {audience['name']}[/bold]")
-            console.print(f"   Provider: {audience['data_provider']}")
-            console.print(f"   Coverage: {audience['coverage_percentage']:.1f}%")
-            console.print(f"   Type: {audience['audience_type']}")
+            # Determine status from deployments
+            live_count = sum(1 for dep in audience["deployments"] if dep["is_live"])
+            total_count = len(audience["deployments"])
             
-            # Show pricing
+            if live_count == total_count:
+                status = "🟢 All Live"
+            elif live_count > 0:
+                status = f"🟡 {live_count}/{total_count} Live"
+            else:
+                status = "⚪ Needs Setup"
+            
+            # Format pricing
             pricing = audience["pricing"]
             if pricing.get("cpm"):
-                console.print(f"   CPM: ${pricing['cpm']:.2f}")
-            if pricing.get("revenue_share_percentage"):
-                console.print(f"   Revenue Share: {pricing['revenue_share_percentage']:.1f}%")
+                cpm_str = f"${pricing['cpm']:.2f}"
+            elif pricing.get("revenue_share_percentage"):
+                cpm_str = f"{pricing['revenue_share_percentage']:.1f}%"
+            else:
+                cpm_str = "N/A"
             
-            # Show deployments
-            console.print(f"   Deployments:")
-            for dep in audience["deployments"]:
-                status = "🟢 Live" if dep["is_live"] else "🟡 Needs Activation"
-                account_info = f" (Account: {dep['account']})" if dep.get("account") else ""
-                console.print(f"     • {dep['platform']}: {status}{account_info}")
-            
-            # Show match reason if available
-            if audience.get("match_reason"):
-                console.print(f"   [dim]Why: {audience['match_reason']}[/dim]")
+            table.add_row(
+                str(i),
+                audience['name'][:40] + "..." if len(audience['name']) > 40 else audience['name'],
+                audience['data_provider'],
+                f"{audience['coverage_percentage']:.1f}%",
+                cpm_str,
+                status
+            )
+        
+        console.print(table)
+        
+        # Show detailed match reasons
+        if any(aud.get("match_reason") for aud in response["audiences"]):
+            console.print("\n[bold yellow]🧠 AI Match Explanations[/bold yellow]")
+            for i, audience in enumerate(response["audiences"], 1):
+                if audience.get("match_reason"):
+                    console.print(f"[dim]{i}.[/dim] [bold]{audience['name']}[/bold]")
+                    console.print(f"   [italic]{audience['match_reason']}[/italic]\n")
         
         # Show custom segment proposals if available
         if response.get("custom_segment_proposals"):
             console.print(f"\n[bold yellow]💡 Custom Segment Proposals[/bold yellow]")
-            console.print("[dim]These segments could be created for better targeting:[/dim]")
+            console.print("[dim]AI-suggested segments that could be created for better targeting:[/dim]\n")
             
-            for i, proposal in enumerate(response["custom_segment_proposals"], 1):
-                console.print(f"\n[bold]{i}. {proposal['proposed_name']}[/bold]")
-                console.print(f"   Target: {proposal['target_audience']}")
-                console.print(f"   Coverage: {proposal['estimated_coverage_percentage']:.1f}%")
-                console.print(f"   Est. CPM: ${proposal['estimated_cpm']:.2f}")
-                console.print(f"   [dim]{proposal['creation_rationale']}[/dim]")
+            # Create proposals table
+            proposals_table = Table(show_header=True, header_style="bold yellow", box=None)
+            proposals_table.add_column("Proposed Segment", style="bold", min_width=25)
+            proposals_table.add_column("Coverage", justify="right", width=10)
+            proposals_table.add_column("Est. CPM", justify="right", width=10)
+            proposals_table.add_column("Rationale", style="dim", min_width=30)
+            
+            for proposal in response["custom_segment_proposals"]:
+                proposals_table.add_row(
+                    proposal['proposed_name'],
+                    f"{proposal['estimated_coverage_percentage']:.1f}%",
+                    f"${proposal['estimated_cpm']:.2f}",
+                    proposal['creation_rationale'][:60] + "..." if len(proposal['creation_rationale']) > 60 else proposal['creation_rationale']
+                )
+            
+            console.print(proposals_table)
+            
+            # Show IDs for activation
+            console.print("\n[dim]To activate a custom segment, use the activate command with these IDs:[/dim]")
+            for proposal in response["custom_segment_proposals"]:
+                console.print(f"  [cyan]{proposal['custom_segment_id']}[/cyan] - {proposal['proposed_name']}")
         
         return response["audiences"]
     
@@ -253,9 +312,15 @@ async def main():
 async def quick_prompt():
     """Quick prompt mode for one-off queries."""
     if len(sys.argv) > 2:
-        audience_spec = " ".join(sys.argv[2:])
+        if sys.argv[2] == "--limit" and len(sys.argv) > 4:
+            max_results = int(sys.argv[3])
+            audience_spec = " ".join(sys.argv[4:])
+        else:
+            max_results = 5
+            audience_spec = " ".join(sys.argv[2:])
     else:
         audience_spec = Prompt.ask("Describe the audience you're looking for")
+        max_results = 5
     
     request_data = {
         "audience_spec": audience_spec,
@@ -263,18 +328,97 @@ async def quick_prompt():
             "platforms": "all",
             "countries": ["US"]
         },
-        "max_results": 5
+        "max_results": max_results
     }
     
     client = Client("main.py")
     async with client:
         try:
-            response = await client.call_tool("get_audiences", request_data)
-            console.print(Panel(
-                json.dumps(response, indent=2, default=str),
-                title=f"Results for: {audience_spec}",
-                border_style="green"
-            ))
+            console.print(f"\n[bold cyan]🔍 Searching for: {audience_spec}[/bold cyan]")
+            console.print(f"[dim]Limiting to top {max_results} results[/dim]\n")
+            
+            result = await client.call_tool("get_audiences", request_data)
+            # Convert response to dict for easier handling
+            if hasattr(result, 'model_dump'):
+                response = result.model_dump()
+            elif hasattr(result, 'dict'):
+                response = result.dict()
+            elif isinstance(result, dict):
+                response = result
+            else:
+                # Fallback: try to access common attributes
+                response = {
+                    "audiences": getattr(result, 'audiences', []),
+                    "custom_segment_proposals": getattr(result, 'custom_segment_proposals', [])
+                }
+            
+            if not response.get("audiences"):
+                console.print("[yellow]No audiences found matching your criteria[/yellow]")
+                return
+            
+            # Display results using the same attractive format as interactive mode
+            console.print(f"[bold green]🎯 Found {len(response['audiences'])} audiences[/bold green]")
+            
+            # Create main results table
+            table = Table(show_header=True, header_style="bold cyan", box=None)
+            table.add_column("#", style="dim", width=3)
+            table.add_column("Audience", style="bold", min_width=25)
+            table.add_column("Provider", style="blue", width=12)
+            table.add_column("Coverage", justify="right", width=8)
+            table.add_column("CPM", justify="right", width=8)
+            table.add_column("Status", width=12)
+            
+            for i, audience in enumerate(response["audiences"], 1):
+                # Determine status from deployments
+                live_count = sum(1 for dep in audience["deployments"] if dep["is_live"])
+                total_count = len(audience["deployments"])
+                
+                if live_count == total_count:
+                    status = "🟢 All Live"
+                elif live_count > 0:
+                    status = f"🟡 {live_count}/{total_count} Live"
+                else:
+                    status = "⚪ Needs Setup"
+                
+                # Format pricing
+                pricing = audience["pricing"]
+                if pricing.get("cpm"):
+                    cpm_str = f"${pricing['cpm']:.2f}"
+                elif pricing.get("revenue_share_percentage"):
+                    cpm_str = f"{pricing['revenue_share_percentage']:.1f}%"
+                else:
+                    cpm_str = "N/A"
+                
+                table.add_row(
+                    str(i),
+                    audience['name'][:35] + "..." if len(audience['name']) > 35 else audience['name'],
+                    audience['data_provider'],
+                    f"{audience['coverage_percentage']:.1f}%",
+                    cpm_str,
+                    status
+                )
+            
+            console.print(table)
+            
+            # Show AI match explanations
+            if any(aud.get("match_reason") for aud in response["audiences"]):
+                console.print("\n[bold yellow]🧠 AI Match Explanations[/bold yellow]")
+                for i, audience in enumerate(response["audiences"], 1):
+                    if audience.get("match_reason"):
+                        console.print(f"[dim]{i}.[/dim] [bold]{audience['name']}[/bold]")
+                        console.print(f"   [italic]{audience['match_reason']}[/italic]\n")
+            
+            # Show custom segment proposals
+            if response.get("custom_segment_proposals"):
+                console.print(f"\n[bold yellow]💡 Custom Segment Proposals[/bold yellow]")
+                console.print("[dim]AI-suggested segments that could be created:[/dim]\n")
+                
+                for i, proposal in enumerate(response["custom_segment_proposals"], 1):
+                    console.print(f"[bold]{i}. {proposal['proposed_name']}[/bold]")
+                    console.print(f"   ID: [cyan]{proposal['custom_segment_id']}[/cyan] (use this ID to activate)")
+                    console.print(f"   Coverage: {proposal['estimated_coverage_percentage']:.1f}% | CPM: ${proposal['estimated_cpm']:.2f}")
+                    console.print(f"   [italic]{proposal['creation_rationale']}[/italic]\n")
+                    
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]")
 

@@ -1,0 +1,33 @@
+{
+  "name": "Audience Agent Demo",
+  "image": "python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.formatting.provider": "black"
+      }
+    }
+  },
+  "postCreateCommand": "pip install uv && uv sync",
+  "remoteUser": "vscode",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "Audience Agent Demo",
+      "onAutoForward": "notify"
+    }
+  }
+}

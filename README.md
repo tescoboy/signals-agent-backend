@@ -79,18 +79,59 @@ This agent implements the following tools from the Audience Activation Protocol:
 - `activate_audience`: Activate audiences for specific platforms/accounts  
 - `check_audience_status`: Check deployment status of audiences
 
+## Live Demo
+
+Try the live demo at: **[Live Demo URL - TBD]**
+
+Or run locally:
+
+```bash
+# Start web demo
+uv run python demo_web.py
+# Open http://localhost:8000
+```
+
 ## Testing
+
+Test the client interactively:
+
+```bash
+uv run python client.py
+```
+
+Quick search with prompt:
+
+```bash
+uv run python client.py --prompt "BMW luxury automotive targeting"
+```
+
+Limit results (default is 5):
+
+```bash
+uv run python client.py --prompt --limit 10 "BMW luxury automotive targeting"
+```
 
 Run the test suite to validate functionality:
 
 ```bash
-python -m unittest test_main.py
+uv run python -m unittest test_main.py
 ```
 
-Run the simulation script to see end-to-end workflow:
+## Full Lifecycle Demo
 
+The system now supports the complete audience lifecycle:
+
+1. **Discovery**: Search for audiences with natural language
+2. **AI Proposals**: Get custom segment suggestions with unique IDs
+3. **Activation**: Activate both existing and custom segments
+4. **Status Tracking**: Check deployment progress
+
+Try activating a custom segment:
 ```bash
-python simulation.py
+uv run python client.py
+# Use 'discover' to get custom segment IDs
+# Use 'activate' with the custom segment ID
+# Use 'status' to check deployment progress
 ```
 
 ## Architecture

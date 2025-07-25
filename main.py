@@ -15,6 +15,11 @@ from database import init_db
 from schemas import *
 
 
+# In-memory storage for custom segments and activations
+custom_segments: Dict[str, Dict] = {}
+segment_activations: Dict[str, Dict] = {}
+
+
 def load_config() -> Dict[str, Any]:
     """Load configuration from config.json."""
     try:
@@ -265,7 +270,30 @@ def get_audiences(
     if audiences:  # Only generate proposals if we found some existing segments
         proposal_data = generate_custom_segment_proposals(audience_spec, ranked_segments)
         for proposal in proposal_data:
-            custom_proposals.append(CustomSegmentProposal(**proposal))
+            # Generate unique ID for custom segment
+            custom_id = f"custom_{len(custom_segments) + 1}_{hash(proposal['proposed_name']) % 10000}"
+            
+            # Store in memory for later activation
+            custom_segments[custom_id] = {
+                "id": custom_id,
+                "name": proposal['proposed_name'],
+                "description": f"Custom segment: {proposal['target_audience']}",
+                "audience_type": "custom",
+                "data_provider": "Custom AI Generated",
+                "coverage_percentage": proposal['estimated_coverage_percentage'],
+                "base_cpm": proposal['estimated_cpm'],
+                "revenue_share_percentage": 0.0,
+                "catalog_access": "personalized",
+                "creation_rationale": proposal['creation_rationale'],
+                "created_at": datetime.now().isoformat()
+            }
+            
+            # Add the custom ID to the proposal
+            proposal_with_id = CustomSegmentProposal(
+                **proposal,
+                custom_segment_id=custom_id
+            )
+            custom_proposals.append(proposal_with_id)
     
     conn.close()
     return GetAudiencesResponse(
@@ -282,6 +310,47 @@ def activate_audience(
 ) -> ActivateAudienceResponse:
     """Activate an audience for use on a specific platform/account."""
     
+    # Check if this is a custom segment
+    if audience_agent_segment_id.startswith("custom_"):
+        if audience_agent_segment_id not in custom_segments:
+            raise ValueError(f"Custom segment '{audience_agent_segment_id}' not found")
+        
+        segment = custom_segments[audience_agent_segment_id]
+        
+        # Check if already activated
+        activation_key = f"{audience_agent_segment_id}_{platform}_{account or 'default'}"
+        if activation_key in segment_activations:
+            existing = segment_activations[activation_key]
+            if existing.get('status') == 'deployed':
+                raise ValueError("Custom segment already activated for this platform/account")
+        
+        # Generate platform segment ID
+        account_suffix = f"_{account}" if account else ""
+        decisioning_platform_segment_id = f"{platform}_{audience_agent_segment_id}{account_suffix}"
+        
+        # Simulate custom segment creation process
+        activation_duration = 120  # Custom segments take longer to create
+        
+        # Store activation record
+        segment_activations[activation_key] = {
+            "audience_agent_segment_id": audience_agent_segment_id,
+            "platform": platform,
+            "account": account,
+            "decisioning_platform_segment_id": decisioning_platform_segment_id,
+            "status": "activating",
+            "activation_started_at": datetime.now().isoformat(),
+            "estimated_completion": (datetime.now() + timedelta(minutes=activation_duration)).isoformat()
+        }
+        
+        console.print(f"[bold cyan]Creating and activating custom segment '{segment['name']}' on {platform}[/bold cyan]")
+        console.print(f"[dim]This involves building the segment from scratch, estimated duration: {activation_duration} minutes[/dim]")
+        
+        return ActivateAudienceResponse(
+            decisioning_platform_segment_id=decisioning_platform_segment_id,
+            estimated_activation_duration_minutes=activation_duration
+        )
+    
+    # Handle regular database segments
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -350,6 +419,42 @@ def check_audience_status(
 ) -> CheckAudienceStatusResponse:
     """Check the deployment status of an audience on a decisioning platform."""
     
+    # Check if this is a custom segment
+    if audience_agent_segment_id.startswith("custom_"):
+        activation_key = f"{audience_agent_segment_id}_{decisioning_platform}_{account or 'default'}"
+        
+        if activation_key not in segment_activations:
+            return CheckAudienceStatusResponse(status="not_found")
+        
+        activation = segment_activations[activation_key]
+        
+        if activation['status'] == 'deployed':
+            return CheckAudienceStatusResponse(
+                status="deployed",
+                deployed_at=datetime.fromisoformat(activation.get('deployed_at', activation['activation_started_at']))
+            )
+        elif activation['status'] == 'activating':
+            # Check if enough time has passed to complete the activation
+            estimated_completion = datetime.fromisoformat(activation['estimated_completion'])
+            if datetime.now() >= estimated_completion:
+                # Mark as deployed
+                activation['status'] = 'deployed'
+                activation['deployed_at'] = datetime.now().isoformat()
+                segment_activations[activation_key] = activation
+                
+                console.print(f"[bold green]Custom segment '{audience_agent_segment_id}' is now live on {decisioning_platform}[/bold green]")
+                
+                return CheckAudienceStatusResponse(
+                    status="deployed",
+                    deployed_at=datetime.now()
+                )
+            else:
+                # Still activating
+                return CheckAudienceStatusResponse(status="activating")
+        
+        return CheckAudienceStatusResponse(status="failed")
+    
+    # Handle regular database segments
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -359,22 +464,19 @@ def check_audience_status(
     """, (audience_agent_segment_id, decisioning_platform, account))
     
     deployment = cursor.fetchone()
-    conn.close()
     
     if not deployment:
+        conn.close()
         return CheckAudienceStatusResponse(status="not_found")
     
     if deployment['is_live']:
+        conn.close()
         return CheckAudienceStatusResponse(
             status="deployed",
             deployed_at=datetime.fromisoformat(deployment['deployed_at']) if deployment['deployed_at'] else None
         )
     else:
-        # Simulate activation process - mark as deployed after activation duration
-        activation_time = datetime.now() + timedelta(minutes=deployment['estimated_activation_duration_minutes'])
-        
         # For demo purposes, immediately mark as deployed
-        cursor = conn.cursor()
         cursor.execute("""
             UPDATE platform_deployments 
             SET is_live = 1, deployed_at = ?

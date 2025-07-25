@@ -68,6 +68,7 @@ class CustomSegmentProposal(BaseModel):
     estimated_coverage_percentage: float
     estimated_cpm: float
     creation_rationale: str
+    custom_segment_id: Optional[str] = None  # ID for activation
 
 
 class GetAudiencesResponse(BaseModel):
