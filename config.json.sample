@@ -1,0 +1,30 @@
+{
+  "agent_config": {
+    "agent_type": "marketplace",
+    "catalog_access": "public",
+    "name": "Sample Audience Agent",
+    "description": "Reference implementation of audience activation protocol"
+  },
+  "database": {
+    "type": "sqlite",
+    "path": "audience_agent.db"
+  },
+  "supported_platforms": [
+    "the-trade-desk",
+    "index-exchange", 
+    "openx",
+    "pubmatic",
+    "google-dv360",
+    "amazon-dsp"
+  ],
+  "pricing": {
+    "default_cpm": 2.50,
+    "currency": "USD",
+    "revenue_share_percentage": 15.0
+  },
+  "deployment": {
+    "default_activation_duration_minutes": 60,
+    "max_activation_duration_minutes": 1440
+  },
+  "gemini_api_key": "your-gemini-api-key-here"
+}
