@@ -102,19 +102,14 @@ async def discover_audiences(client: Client):
     try:
         console.print("\n[dim]Searching for audiences...[/dim]")
         result = await client.call_tool("get_audiences", request_data)
-        # Convert response to dict for easier handling
-        if hasattr(result, 'model_dump'):
-            response = result.model_dump()
-        elif hasattr(result, 'dict'):
-            response = result.dict()
-        elif isinstance(result, dict):
-            response = result
+        # Extract the actual response data - use structured_content which is already a dict
+        if hasattr(result, 'structured_content') and result.structured_content:
+            response = result.structured_content
+        elif hasattr(result, 'data') and result.data:
+            response = result.data.model_dump()
         else:
-            # Fallback: try to access common attributes
-            response = {
-                "audiences": getattr(result, 'audiences', []),
-                "custom_segment_proposals": getattr(result, 'custom_segment_proposals', [])
-            }
+            # Fallback - shouldn't happen
+            response = {"audiences": [], "custom_segment_proposals": []}
         
         if not response.get("audiences"):
             console.print("[yellow]No audiences found matching your criteria[/yellow]")
@@ -338,19 +333,14 @@ async def quick_prompt():
             console.print(f"[dim]Limiting to top {max_results} results[/dim]\n")
             
             result = await client.call_tool("get_audiences", request_data)
-            # Convert response to dict for easier handling
-            if hasattr(result, 'model_dump'):
-                response = result.model_dump()
-            elif hasattr(result, 'dict'):
-                response = result.dict()
-            elif isinstance(result, dict):
-                response = result
+            # Extract the actual response data - use structured_content which is already a dict
+            if hasattr(result, 'structured_content') and result.structured_content:
+                response = result.structured_content
+            elif hasattr(result, 'data') and result.data:
+                response = result.data.model_dump()
             else:
-                # Fallback: try to access common attributes
-                response = {
-                    "audiences": getattr(result, 'audiences', []),
-                    "custom_segment_proposals": getattr(result, 'custom_segment_proposals', [])
-                }
+                # Fallback - shouldn't happen
+                response = {"audiences": [], "custom_segment_proposals": []}
             
             if not response.get("audiences"):
                 console.print("[yellow]No audiences found matching your criteria[/yellow]")
