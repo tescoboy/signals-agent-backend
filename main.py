@@ -14,20 +14,12 @@ from rich.console import Console
 from database import init_db
 from schemas import *
 from adapters.manager import AdapterManager
+from config_loader import load_config
 
 
 # In-memory storage for custom segments and activations
 custom_segments: Dict[str, Dict] = {}
 segment_activations: Dict[str, Dict] = {}
-
-
-def load_config() -> Dict[str, Any]:
-    """Load configuration from config.json."""
-    try:
-        with open('config.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print("Error: config.json not found. Please create it by copying config.json.sample.")
         exit(1)
     except json.JSONDecodeError:
         print("Error: Could not decode config.json. Please check its format.")
