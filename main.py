@@ -158,6 +158,71 @@ console = Console()
 # --- MCP Tools ---
 
 @mcp.tool
+def get_audience_examples() -> Dict[str, Any]:
+    """
+    Get examples of how to use the audience discovery tools.
+    
+    Returns common usage patterns and platform configurations.
+    """
+    return {
+        "description": "Examples for using the Audience Activation Protocol",
+        "get_audiences_examples": [
+            {
+                "description": "Search all platforms for luxury audiences",
+                "request": {
+                    "audience_spec": "luxury car buyers in California",
+                    "deliver_to": {
+                        "platforms": "all",
+                        "countries": ["US"]
+                    }
+                }
+            },
+            {
+                "description": "Search specific platforms with account",
+                "request": {
+                    "audience_spec": "parents with young children",
+                    "deliver_to": {
+                        "platforms": [
+                            {"platform": "the-trade-desk"},
+                            {"platform": "index-exchange", "account": "1489997"}
+                        ],
+                        "countries": ["US", "UK"]
+                    },
+                    "principal_id": "acme_corp"
+                }
+            },
+            {
+                "description": "Search with price filters",
+                "request": {
+                    "audience_spec": "budget-conscious travelers",
+                    "deliver_to": {
+                        "platforms": "all",
+                        "countries": ["US"]
+                    },
+                    "filters": {
+                        "max_cpm": 5.0,
+                        "min_coverage_percentage": 10.0
+                    }
+                }
+            }
+        ],
+        "available_platforms": [
+            "the-trade-desk",
+            "index-exchange",
+            "openx",
+            "pubmatic",
+            "google-dv360",
+            "amazon-dsp"
+        ],
+        "principal_ids": [
+            "acme_corp (personalized catalog)",
+            "premium_partner (personalized catalog)",
+            "enterprise_client (private catalog)"
+        ]
+    }
+
+
+@mcp.tool
 def get_audiences(
     audience_spec: str,
     deliver_to: DeliverySpecification,
@@ -165,7 +230,34 @@ def get_audiences(
     max_results: Optional[int] = 10,
     principal_id: Optional[str] = None
 ) -> GetAudiencesResponse:
-    """Discover relevant audiences based on a marketing specification."""
+    """
+    Discover relevant audiences based on a marketing specification.
+    
+    This tool uses AI to match your natural language audience description with available segments
+    across multiple decisioning platforms.
+    
+    Args:
+        audience_spec: Natural language description of your target audience
+                      Examples: "luxury car buyers", "parents with young children", 
+                                "high-income travelers"
+        
+        deliver_to: Where to search for audiences
+                    - Set platforms to "all" to search across all platforms
+                    - Or specify specific platforms like:
+                      {"platforms": [{"platform": "the-trade-desk"}, 
+                                     {"platform": "index-exchange", "account": "1489997"}]}
+        
+        filters: Optional filters to refine results (max_cpm, min_coverage, etc.)
+        
+        max_results: Number of audiences to return (1-100, default 10)
+        
+        principal_id: Your account ID for accessing private catalogs and custom pricing
+                      Examples: "acme_corp", "agency_123"
+    
+    Returns:
+        List of matching audiences with deployment status, pricing, and AI-generated
+        match explanations. Also includes custom segment proposals when relevant.
+    """
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -265,8 +357,14 @@ def get_audiences(
                 include_platform = True
             else:
                 # Check if this platform is in the requested list
-                requested_platforms = {p.get('platform') if isinstance(p, dict) else p 
-                                     for p in deliver_to.platforms}
+                requested_platforms = set()
+                for p in deliver_to.platforms:
+                    if hasattr(p, 'platform'):  # PlatformSpecification object
+                        requested_platforms.add(p.platform)
+                    elif isinstance(p, dict):  # Legacy dict format
+                        requested_platforms.add(p.get('platform'))
+                    else:  # String format
+                        requested_platforms.add(p)
                 include_platform = platform_name in requested_platforms
             
             if include_platform:
@@ -295,8 +393,14 @@ def get_audiences(
                 platform_deployments = [PlatformDeployment(**dep) for dep in deployments]
             else:
                 # Filter deployments by requested platforms
-                requested_platforms = {p.get('platform') if isinstance(p, dict) else p 
-                                     for p in deliver_to.platforms}
+                requested_platforms = set()
+                for p in deliver_to.platforms:
+                    if hasattr(p, 'platform'):  # PlatformSpecification object
+                        requested_platforms.add(p.platform)
+                    elif isinstance(p, dict):  # Legacy dict format
+                        requested_platforms.add(p.get('platform'))
+                    else:  # String format
+                        requested_platforms.add(p)
                 platform_deployments = []
                 
                 for dep in deployments:

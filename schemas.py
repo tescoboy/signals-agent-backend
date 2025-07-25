@@ -40,10 +40,35 @@ class AudienceResponse(BaseModel):
 
 # --- Request Models ---
 
+class PlatformSpecification(BaseModel):
+    """Specification for a single platform to deliver to."""
+    platform: str = Field(
+        ..., 
+        description="Platform identifier (e.g., 'the-trade-desk', 'index-exchange', 'google-dv360')",
+        examples=["the-trade-desk", "index-exchange"]
+    )
+    account: Optional[str] = Field(
+        None,
+        description="Optional account ID for platform-specific delivery. Required for some platforms.",
+        examples=["1489997", "acct_12345"]
+    )
+
+
 class DeliverySpecification(BaseModel):
-    """Platform delivery specification."""
-    platforms: Union[List[Dict[str, Any]], Literal["all"]]
-    countries: List[str] = ["US"]
+    """Specifies where audiences should be delivered/discovered."""
+    platforms: Union[List[PlatformSpecification], Literal["all"]] = Field(
+        ...,
+        description='Either "all" to search all platforms, or a list of specific platform specifications',
+        examples=[
+            "all",
+            [{"platform": "the-trade-desk"}, {"platform": "index-exchange", "account": "1489997"}]
+        ]
+    )
+    countries: List[str] = Field(
+        ["US"],
+        description="List of country codes for geographic targeting",
+        examples=[["US"], ["US", "UK", "CA"]]
+    )
 
 
 class AudienceFilters(BaseModel):
@@ -55,11 +80,35 @@ class AudienceFilters(BaseModel):
 
 
 class GetAudiencesRequest(BaseModel):
-    """Request for discovering audiences."""
-    audience_spec: str
-    deliver_to: DeliverySpecification
-    filters: Optional[AudienceFilters] = None
-    max_results: Optional[int] = 10
+    """Request for discovering audiences matching your targeting needs."""
+    audience_spec: str = Field(
+        ...,
+        description="Natural language description of your target audience",
+        examples=[
+            "luxury car buyers in California",
+            "parents with young children interested in educational content",
+            "high-income travelers who book premium hotels"
+        ]
+    )
+    deliver_to: DeliverySpecification = Field(
+        ...,
+        description="Where to search for/deliver audiences"
+    )
+    filters: Optional[AudienceFilters] = Field(
+        None,
+        description="Optional filters to refine results"
+    )
+    max_results: Optional[int] = Field(
+        10,
+        description="Maximum number of audiences to return",
+        ge=1,
+        le=100
+    )
+    principal_id: Optional[str] = Field(
+        None,
+        description="Your principal/account ID for accessing private catalogs and custom pricing",
+        examples=["acme_corp", "agency_123"]
+    )
 
 
 class CustomSegmentProposal(BaseModel):
