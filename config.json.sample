@@ -26,5 +26,27 @@
     "default_activation_duration_minutes": 60,
     "max_activation_duration_minutes": 1440
   },
+  "platforms": {
+    "index-exchange": {
+      "enabled": true,
+      "test_mode": true,
+      "base_url": "https://app.indexexchange.com/api",
+      "username": "emulitz@scope3.com",
+      "password": ""Q3Jb3dLPJTHMGr!",
+      "cache_duration_seconds": 60,
+      "principal_accounts": {
+        "acme_corp": "1489997",
+        "luxury_brands_inc": "1497965",
+        "auto_manufacturer": "1502624"
+      }
+    },
+    "the-trade-desk": {
+      "enabled": false,
+      "test_mode": false,
+      "base_url": "https://api.thetradedesk.com",
+      "cache_duration_seconds": 60,
+      "principal_accounts": {}
+    }
+  },
   "gemini_api_key": "your-gemini-api-key-here"
 }

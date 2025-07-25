@@ -16,8 +16,11 @@ The Audience Agent provides:
 - **Smart Match Explanations**: Each result includes AI-generated explanations of why the segment matches your targeting goals
 - **Custom Segment Proposals**: AI suggests new custom segments that could be created for better targeting
 - **Multi-Platform Support**: Discover audiences across multiple SSPs (Index Exchange, The Trade Desk, OpenX, etc.)
+- **Live Platform Integration**: Real-time API integration with decisioning platforms (Index Exchange supported)
+- **Intelligent Caching**: 60-second API response caching for optimal performance
 - **Real-Time Activation**: On-demand audience deployment to decisioning platforms
 - **Transparent Pricing**: CPM and revenue share models with realistic market pricing
+- **Data Transparency**: Shows "Unknown" for coverage/pricing when data is not available (no guessing)
 
 ## Agent Types Supported
 
@@ -115,6 +118,43 @@ uv run python client.py --prompt "luxury automotive" --principal acme_corp
 The same segment may show different pricing:
 - Public: $2.50 CPM for luxury segments
 - ACME Corp: $6.50 CPM (custom negotiated rate)
+
+### Platform Adapter Integration
+
+The system supports real-time integration with decisioning platform APIs:
+
+**Supported Platforms:**
+- **Index Exchange**: Live API integration with authentication and caching
+- **The Trade Desk**: Adapter framework ready (implementation pending)
+
+**Configuration:**
+```json
+{
+  "platforms": {
+    "index-exchange": {
+      "enabled": true,
+      "test_mode": false,
+      "username": "your-ix-username", 
+      "password": "your-ix-password",
+      "principal_accounts": {
+        "acme_corp": "1489997"
+      }
+    }
+  }
+}
+```
+
+Set `test_mode: true` to use simulated API responses for development/testing.
+
+**Security:**
+- Principal-to-account ID mapping prevents unauthorized access
+- API credentials stored securely in config
+- 60-second response caching reduces API load
+
+**Data Transparency:**
+- When platform APIs don't provide coverage data, shows "Unknown" instead of estimates
+- When segments have no fees configured, shows "Unknown" for pricing
+- Clear differentiation between known and unknown data points
 
 ## 🚀 Try the Live Demo
 

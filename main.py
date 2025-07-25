@@ -13,6 +13,7 @@ from rich.console import Console
 
 from database import init_db
 from schemas import *
+from adapters.manager import AdapterManager
 
 
 # In-memory storage for custom segments and activations
@@ -159,6 +160,9 @@ init_db()
 genai.configure(api_key=config.get("gemini_api_key", "your-api-key-here"))
 model = genai.GenerativeModel('gemini-2.0-flash-exp')
 
+# Initialize platform adapters
+adapter_manager = AdapterManager(config)
+
 mcp = FastMCP(name="AudienceActivationAgent")
 console = Console()
 
@@ -237,38 +241,85 @@ def get_audiences(
     params.append(max_results or 10)
     
     cursor.execute(query, params)
-    segments = [dict(row) for row in cursor.fetchall()]
+    db_segments = [dict(row) for row in cursor.fetchall()]
+    
+    # Get segments from platform adapters
+    platform_segments = []
+    try:
+        platform_segments = adapter_manager.get_all_segments(
+            deliver_to.model_dump(), 
+            principal_id
+        )
+        if platform_segments:
+            console.print(f"[dim]Found {len(platform_segments)} segments from platform APIs[/dim]")
+    except Exception as e:
+        console.print(f"[yellow]Platform adapter error: {e}[/yellow]")
+    
+    # Combine database and platform segments
+    all_segments = db_segments + platform_segments
     
     # Use AI to rank segments by relevance to the audience spec
-    ranked_segments = rank_audiences_with_ai(audience_spec, segments, max_results or 10)
+    ranked_segments = rank_audiences_with_ai(audience_spec, all_segments, max_results or 10)
     
     audiences = []
     for segment in ranked_segments:
-        # Get platform deployments for this segment
-        cursor.execute("""
-            SELECT * FROM platform_deployments 
-            WHERE audience_agent_segment_id = ?
-        """, (segment['id'],))
-        deployments = [dict(row) for row in cursor.fetchall()]
+        platform_deployments = []
         
-        # Filter deployments based on requested platforms
-        if isinstance(deliver_to.platforms, str) and deliver_to.platforms == "all":
-            # Return all deployments
-            platform_deployments = [PlatformDeployment(**dep) for dep in deployments]
-        else:
-            # Filter deployments by requested platforms
-            requested_platforms = {p.get('platform') if isinstance(p, dict) else p 
-                                 for p in deliver_to.platforms}
-            platform_deployments = []
+        # Handle platform adapter segments differently than database segments
+        if segment.get('platform'):
+            # This is a platform adapter segment
+            platform_name = segment['platform']
+            account_id = segment.get('account_id')
             
-            for dep in deployments:
-                if dep['platform'] in requested_platforms:
-                    platform_deployments.append(PlatformDeployment(**dep))
+            # Check if this platform was requested
+            if isinstance(deliver_to.platforms, str) and deliver_to.platforms == "all":
+                # Include all platforms
+                include_platform = True
+            else:
+                # Check if this platform is in the requested list
+                requested_platforms = {p.get('platform') if isinstance(p, dict) else p 
+                                     for p in deliver_to.platforms}
+                include_platform = platform_name in requested_platforms
+            
+            if include_platform:
+                # Create a deployment record for the platform segment
+                platform_deployments = [PlatformDeployment(
+                    audience_agent_segment_id=segment['id'],
+                    platform=platform_name,
+                    account=account_id,
+                    decisioning_platform_segment_id=segment.get('platform_segment_id', segment['id']),
+                    scope="account-specific" if account_id else "platform-wide",
+                    is_live=True,  # Platform adapter segments are assumed live
+                    deployed_at=datetime.now().isoformat(),
+                    estimated_activation_duration_minutes=15
+                )]
+        else:
+            # This is a database segment - get platform deployments as before
+            cursor.execute("""
+                SELECT * FROM platform_deployments 
+                WHERE audience_agent_segment_id = ?
+            """, (segment['id'],))
+            deployments = [dict(row) for row in cursor.fetchall()]
+            
+            # Filter deployments based on requested platforms
+            if isinstance(deliver_to.platforms, str) and deliver_to.platforms == "all":
+                # Return all deployments
+                platform_deployments = [PlatformDeployment(**dep) for dep in deployments]
+            else:
+                # Filter deployments by requested platforms
+                requested_platforms = {p.get('platform') if isinstance(p, dict) else p 
+                                     for p in deliver_to.platforms}
+                platform_deployments = []
+                
+                for dep in deployments:
+                    if dep['platform'] in requested_platforms:
+                        platform_deployments.append(PlatformDeployment(**dep))
         
         if platform_deployments:
             # Check for custom pricing for this principal
             cpm = segment['base_cpm']
-            if principal_id:
+            if principal_id and not segment.get('platform'):
+                # Only check database for custom pricing on database segments
                 cursor.execute("""
                     SELECT custom_cpm FROM principal_segment_access 
                     WHERE principal_id = ? AND audience_agent_segment_id = ? AND custom_cpm IS NOT NULL

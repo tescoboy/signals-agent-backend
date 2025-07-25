@@ -141,18 +141,24 @@ async def discover_audiences(client: Client):
             
             # Format pricing
             pricing = audience["pricing"]
-            if pricing.get("cpm"):
-                cpm_str = f"${pricing['cpm']:.2f}"
+            # Check if we have pricing data
+            if audience.get("has_pricing_data") is False:
+                cpm_str = "Unknown"
+            elif "cpm" in pricing and pricing["cpm"] is not None:
+                if pricing["cpm"] == 0:
+                    cpm_str = "Free"
+                else:
+                    cpm_str = f"${pricing['cpm']:.2f}"
             elif pricing.get("revenue_share_percentage"):
                 cpm_str = f"{pricing['revenue_share_percentage']:.1f}%"
             else:
-                cpm_str = "N/A"
+                cpm_str = "Unknown"
             
             table.add_row(
                 str(i),
                 audience['name'][:40] + "..." if len(audience['name']) > 40 else audience['name'],
                 audience['data_provider'],
-                f"{audience['coverage_percentage']:.1f}%",
+                "Unknown" if audience.get('has_coverage_data') is False else f"{audience['coverage_percentage']:.1f}%",
                 cpm_str,
                 status
             )
@@ -404,18 +410,21 @@ async def quick_prompt():
                 
                 # Format pricing
                 pricing = audience["pricing"]
-                if pricing.get("cpm"):
+                # Check if we have pricing data
+                if audience.get("has_pricing_data") is False:
+                    cpm_str = "Unknown"
+                elif pricing.get("cpm"):
                     cpm_str = f"${pricing['cpm']:.2f}"
                 elif pricing.get("revenue_share_percentage"):
                     cpm_str = f"{pricing['revenue_share_percentage']:.1f}%"
                 else:
-                    cpm_str = "N/A"
+                    cpm_str = "Unknown"
                 
                 table.add_row(
                     str(i),
                     audience['name'][:35] + "..." if len(audience['name']) > 35 else audience['name'],
                     audience['data_provider'],
-                    f"{audience['coverage_percentage']:.1f}%",
+                    "Unknown" if audience.get('has_coverage_data') is False else f"{audience['coverage_percentage']:.1f}%",
                     cpm_str,
                     status
                 )
