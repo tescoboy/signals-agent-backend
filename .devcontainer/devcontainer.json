@@ -17,16 +17,17 @@
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "python.formatting.provider": "black"
+        "python.formatting.provider": "black",
+        "terminal.integrated.defaultProfile.linux": "zsh"
       }
     }
   },
-  "postCreateCommand": "pip install uv && uv sync",
+  "postCreateCommand": "pip install uv && uv sync && cp config.json.sample config.json && echo '\n🎯 Audience Agent Demo Ready!\n\nNext steps:\n1. Edit config.json to add your Gemini API key (get one at ai.google.dev)\n2. Run: uv run python database.py\n3. Run: uv run python demo_web.py\n4. Open the forwarded port 8000\n\nSee DEMO_GUIDE.md for complete instructions!\n'",
   "remoteUser": "vscode",
   "forwardPorts": [8000],
   "portsAttributes": {
     "8000": {
-      "label": "Audience Agent Demo",
+      "label": "Audience Agent Web Demo",
       "onAutoForward": "notify"
     }
   }

@@ -2,6 +2,12 @@
 
 This project is a Python-based reference implementation of an Audience Activation Protocol agent as defined in the [Ad Context Protocol](../adcontextprotocol/docs/audience/specification.md). It demonstrates how to build an audience platform that integrates with AI assistants through the Model Context Protocol (MCP).
 
+## 🚀 Try the Live Demo
+
+**Quick Start**: Click the green **"Code"** button above → **"Codespaces"** → **"Create codespace on main"**
+
+The demo will automatically set up with real Peer39 data and AI-powered audience discovery. See [DEMO_GUIDE.md](DEMO_GUIDE.md) for complete instructions.
+
 ## Overview
 
 The Audience Agent provides:
@@ -34,41 +40,46 @@ This reference implementation supports all three audience agent types:
 
 ## Getting Started
 
-### 1. Installation
+### Option 1: GitHub Codespaces (Recommended)
 
-This project uses `uv` for package management:
+The fastest way to try the demo:
+
+1. Click **"Code"** → **"Codespaces"** → **"Create codespace on main"**
+2. Wait for automatic setup (dependencies install automatically)
+3. Get a free Gemini API key at [ai.google.dev](https://ai.google.dev)
+4. Configure your API key:
+   ```bash
+   cp config.json.sample config.json
+   # Edit config.json to add your API key
+   ```
+5. Initialize the database:
+   ```bash
+   uv run python database.py
+   ```
+6. Start the web demo:
+   ```bash
+   uv run python demo_web.py
+   # Open the forwarded port 8000 in your browser
+   ```
+
+### Option 2: Local Installation
+
+For local development:
 
 ```bash
+# Install dependencies
 pip install uv
-uv pip install -r pyproject.toml
-```
+uv sync
 
-### 2. Configuration
-
-Copy the sample configuration file and add your Gemini API key:
-
-```bash
+# Configure API key
 cp config.json.sample config.json
-```
+# Edit config.json with your Gemini API key from ai.google.dev
 
-Edit `config.json` and replace `"your-gemini-api-key-here"` with your actual Google Gemini API key. You can get one at [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey).
+# Initialize database
+uv run python database.py
 
-**Important:** The `config.json` file is gitignored to protect your API key. Only the `config.json.sample` template is tracked in git.
-
-### 3. Database Setup
-
-Initialize the database with sample data:
-
-```bash
-python database.py
-```
-
-### 4. Running the Agent
-
-Start the MCP server:
-
-```bash
-python main.py
+# Start MCP server
+uv run python main.py
 ```
 
 ## Protocol Implementation
