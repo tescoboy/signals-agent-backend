@@ -31,9 +31,11 @@ class AudienceResponse(BaseModel):
     description: str
     audience_type: Literal["private", "marketplace"]
     data_provider: str
-    coverage_percentage: float
+    coverage_percentage: Optional[float] = None
     deployments: List[PlatformDeployment]
     pricing: PricingModel
+    has_coverage_data: Optional[bool] = None
+    has_pricing_data: Optional[bool] = None
 
 
 # --- Request Models ---

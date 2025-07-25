@@ -327,7 +327,9 @@ def get_audiences(
                 pricing=PricingModel(
                     cpm=cpm,
                     revenue_share_percentage=segment['revenue_share_percentage']
-                )
+                ),
+                has_coverage_data=segment.get('has_coverage_data', True),  # Database segments have coverage
+                has_pricing_data=segment.get('has_pricing_data', True)  # Database segments have pricing
             )
             audiences.append(audience)
     
