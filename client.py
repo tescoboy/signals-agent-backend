@@ -207,6 +207,7 @@ async def activate_audience(client: Client):
     segment_id = Prompt.ask("Audience segment ID")
     platform = Prompt.ask("Platform")
     account = Prompt.ask("Account (optional)", default="")
+    principal_id = Prompt.ask("Principal ID (optional)", default="")
     
     request_data = {
         "audience_agent_segment_id": segment_id,
@@ -215,6 +216,9 @@ async def activate_audience(client: Client):
     
     if account:
         request_data["account"] = account
+    
+    if principal_id:
+        request_data["principal_id"] = principal_id
     
     try:
         console.print("\n[dim]Activating audience...[/dim]")
@@ -237,6 +241,7 @@ async def check_status(client: Client):
     segment_id = Prompt.ask("Audience segment ID")
     platform = Prompt.ask("Platform")
     account = Prompt.ask("Account (optional)", default="")
+    principal_id = Prompt.ask("Principal ID (optional)", default="")
     
     request_data = {
         "audience_agent_segment_id": segment_id,
@@ -245,6 +250,9 @@ async def check_status(client: Client):
     
     if account:
         request_data["account"] = account
+    
+    if principal_id:
+        request_data["principal_id"] = principal_id
     
     try:
         response = await client.call_tool("check_audience_status", request_data)
@@ -306,16 +314,36 @@ async def main():
 
 async def quick_prompt():
     """Quick prompt mode for one-off queries."""
-    if len(sys.argv) > 2:
-        if sys.argv[2] == "--limit" and len(sys.argv) > 4:
-            max_results = int(sys.argv[3])
-            audience_spec = " ".join(sys.argv[4:])
+    max_results = 5
+    principal_id = None
+    audience_spec = ""
+    
+    # Parse command line arguments
+    i = 2
+    args_to_skip = []
+    
+    while i < len(sys.argv):
+        if sys.argv[i] == "--limit" and i + 1 < len(sys.argv):
+            max_results = int(sys.argv[i + 1])
+            args_to_skip.extend([i, i + 1])
+            i += 2
+        elif sys.argv[i] == "--principal" and i + 1 < len(sys.argv):
+            principal_id = sys.argv[i + 1]
+            args_to_skip.extend([i, i + 1])
+            i += 2
         else:
-            max_results = 5
-            audience_spec = " ".join(sys.argv[2:])
-    else:
+            i += 1
+    
+    # Build audience_spec from remaining arguments
+    audience_parts = []
+    for i in range(2, len(sys.argv)):
+        if i not in args_to_skip:
+            audience_parts.append(sys.argv[i])
+    
+    audience_spec = " ".join(audience_parts)
+    
+    if not audience_spec:
         audience_spec = Prompt.ask("Describe the audience you're looking for")
-        max_results = 5
     
     request_data = {
         "audience_spec": audience_spec,
@@ -326,11 +354,15 @@ async def quick_prompt():
         "max_results": max_results
     }
     
+    if principal_id:
+        request_data["principal_id"] = principal_id
+    
     client = Client("main.py")
     async with client:
         try:
             console.print(f"\n[bold cyan]🔍 Searching for: {audience_spec}[/bold cyan]")
-            console.print(f"[dim]Limiting to top {max_results} results[/dim]\n")
+            principal_note = f" (Principal: {principal_id})" if principal_id else " (Public access)"
+            console.print(f"[dim]Limiting to top {max_results} results{principal_note}[/dim]\n")
             
             result = await client.call_tool("get_audiences", request_data)
             # Extract the actual response data - use structured_content which is already a dict

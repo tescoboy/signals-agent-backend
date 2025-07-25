@@ -89,6 +89,33 @@ This agent implements the following tools from the Audience Activation Protocol:
 - `activate_audience`: Activate audiences for specific platforms/accounts  
 - `check_audience_status`: Check deployment status of audiences
 
+### Principal-Based Access Control
+
+The implementation supports differentiated access levels and pricing based on principal identity:
+
+**Access Levels:**
+- **Public**: Standard catalog access with base pricing
+- **Personalized**: Access to additional segments with account-specific pricing  
+- **Private**: Full catalog access including exclusive segments
+
+**Example principals configured:**
+- `acme_corp` (personalized access) - Custom pricing for luxury segments
+- `premium_partner` (personalized access) - Standard personalized pricing
+- `enterprise_client` (private access) - Full catalog access
+
+**Usage:**
+```bash
+# Public access (default)
+uv run python client.py --prompt "luxury automotive"
+
+# Principal with custom pricing
+uv run python client.py --prompt "luxury automotive" --principal acme_corp
+```
+
+The same segment may show different pricing:
+- Public: $2.50 CPM for luxury segments
+- ACME Corp: $6.50 CPM (custom negotiated rate)
+
 ## 🚀 Try the Live Demo
 
 **Quick Start**: Click the green **"Code"** button above → **"Codespaces"** → **"Create codespace on main"**
@@ -103,7 +130,10 @@ uv run python client.py
 uv run python client.py --prompt "BMW luxury automotive targeting"
 
 # Limit results (default is 5)
-uv run python client.py --prompt --limit 10 "BMW luxury automotive targeting"
+uv run python client.py --prompt "BMW luxury automotive targeting" --limit 10
+
+# Test different principal access levels and pricing
+uv run python client.py --prompt "luxury" --principal acme_corp
 ```
 
 ## Testing
@@ -127,9 +157,14 @@ Try activating a custom segment:
 ```bash
 uv run python client.py
 # Use 'discover' to get custom segment IDs
-# Use 'activate' with the custom segment ID
-# Use 'status' to check deployment progress
+# Use 'activate' with the custom segment ID (supports --principal)
+# Use 'status' to check deployment progress (supports --principal)
 ```
+
+The interactive mode now supports principal identity for all operations:
+- **Discovery**: Different catalogs and pricing based on principal
+- **Activation**: Principal-based access control prevents unauthorized activations
+- **Status Checking**: Only shows status for segments the principal can access
 
 ## Architecture
 

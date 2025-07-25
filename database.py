@@ -41,6 +41,33 @@ def create_tables(cursor: sqlite3.Cursor):
         )
     """)
     
+    # Principals table (for access control)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS principals (
+            principal_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            access_level TEXT NOT NULL CHECK (access_level IN ('public', 'personalized', 'private')),
+            description TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    
+    # Principal segment access table (for personalized catalogs)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS principal_segment_access (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            principal_id TEXT NOT NULL,
+            audience_agent_segment_id TEXT NOT NULL,
+            access_type TEXT NOT NULL CHECK (access_type IN ('granted', 'custom_pricing')),
+            custom_cpm REAL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (principal_id) REFERENCES principals (principal_id),
+            FOREIGN KEY (audience_agent_segment_id) REFERENCES audience_segments (id),
+            UNIQUE(principal_id, audience_agent_segment_id)
+        )
+    """)
+    
     # Platform deployments table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS platform_deployments (
@@ -252,6 +279,91 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             deployment['account'], deployment['decisioning_platform_segment_id'],
             deployment['scope'], deployment['is_live'], deployment['deployed_at'],
             deployment['estimated_activation_duration_minutes']
+        ))
+    
+    # Insert sample principals
+    principals = [
+        {
+            'principal_id': 'public',
+            'name': 'Public Access',
+            'access_level': 'public',
+            'description': 'Default public access - sees only public catalog segments'
+        },
+        {
+            'principal_id': 'acme_corp',
+            'name': 'ACME Corporation',
+            'access_level': 'personalized',
+            'description': 'Large advertiser with personalized catalog access and custom pricing'
+        },
+        {
+            'principal_id': 'luxury_brands_inc',
+            'name': 'Luxury Brands Inc',
+            'access_level': 'personalized', 
+            'description': 'Premium luxury brand advertiser with specialized segments'
+        },
+        {
+            'principal_id': 'startup_agency',
+            'name': 'Startup Digital Agency',
+            'access_level': 'public',
+            'description': 'Small agency with public catalog access only'
+        },
+        {
+            'principal_id': 'auto_manufacturer',
+            'name': 'Global Auto Manufacturer',
+            'access_level': 'private',
+            'description': 'Private client with exclusive custom segments'
+        }
+    ]
+    
+    for principal in principals:
+        cursor.execute("""
+            INSERT OR REPLACE INTO principals 
+            (principal_id, name, access_level, description, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            principal['principal_id'], principal['name'], principal['access_level'],
+            principal['description'], now
+        ))
+    
+    # Insert principal-specific segment access
+    principal_access = [
+        # ACME Corp gets custom pricing on some segments
+        {
+            'principal_id': 'acme_corp',
+            'audience_agent_segment_id': 'luxury_auto_intenders',
+            'access_type': 'custom_pricing',
+            'custom_cpm': 6.50,  # Discounted from 8.75
+            'notes': 'Volume discount for large advertiser'
+        },
+        {
+            'principal_id': 'acme_corp', 
+            'audience_agent_segment_id': 'sports_enthusiasts_public',
+            'access_type': 'custom_pricing',
+            'custom_cpm': 2.75,  # Discounted from 3.50
+            'notes': 'Preferred customer pricing'
+        },
+        
+        # Luxury Brands Inc gets exclusive access to luxury segments
+        {
+            'principal_id': 'luxury_brands_inc',
+            'audience_agent_segment_id': 'luxury_auto_intenders', 
+            'access_type': 'granted',
+            'custom_cpm': None,
+            'notes': 'Exclusive access to luxury audience'
+        },
+        
+        # Auto Manufacturer gets private segments (we'll add these next)
+        # For now, they also get custom pricing on automotive segments
+    ]
+    
+    for access in principal_access:
+        cursor.execute("""
+            INSERT OR REPLACE INTO principal_segment_access
+            (principal_id, audience_agent_segment_id, access_type, custom_cpm, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            access['principal_id'], access['audience_agent_segment_id'], 
+            access['access_type'], access['custom_cpm'], access['notes'], now
         ))
 
 

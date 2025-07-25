@@ -170,17 +170,33 @@ def get_audiences(
     audience_spec: str,
     deliver_to: DeliverySpecification,
     filters: Optional[AudienceFilters] = None,
-    max_results: Optional[int] = 10
+    max_results: Optional[int] = 10,
+    principal_id: Optional[str] = None
 ) -> GetAudiencesResponse:
     """Discover relevant audiences based on a marketing specification."""
     
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Build query based on filters
-    query = """
+    # Determine catalog access based on principal
+    principal_access_level = 'public'  # Default
+    if principal_id:
+        cursor.execute("SELECT access_level FROM principals WHERE principal_id = ?", (principal_id,))
+        principal_row = cursor.fetchone()
+        if principal_row:
+            principal_access_level = principal_row['access_level']
+    
+    # Build query based on principal access level
+    if principal_access_level == 'public':
+        catalog_filter = "catalog_access = 'public'"
+    elif principal_access_level == 'personalized':
+        catalog_filter = "catalog_access IN ('public', 'personalized')"
+    else:  # private
+        catalog_filter = "catalog_access IN ('public', 'personalized', 'private')"
+    
+    query = f"""
         SELECT * FROM audience_segments 
-        WHERE catalog_access IN ('public', 'personalized')
+        WHERE {catalog_filter}
     """
     params = []
     
@@ -250,6 +266,17 @@ def get_audiences(
                     platform_deployments.append(PlatformDeployment(**dep))
         
         if platform_deployments:
+            # Check for custom pricing for this principal
+            cpm = segment['base_cpm']
+            if principal_id:
+                cursor.execute("""
+                    SELECT custom_cpm FROM principal_segment_access 
+                    WHERE principal_id = ? AND audience_agent_segment_id = ? AND custom_cpm IS NOT NULL
+                """, (principal_id, segment['id']))
+                custom_pricing = cursor.fetchone()
+                if custom_pricing:
+                    cpm = custom_pricing['custom_cpm']
+            
             audience = AudienceResponse(
                 audience_agent_segment_id=segment['id'],
                 name=segment['name'],
@@ -259,7 +286,7 @@ def get_audiences(
                 coverage_percentage=segment['coverage_percentage'],
                 deployments=platform_deployments,
                 pricing=PricingModel(
-                    cpm=segment['base_cpm'],
+                    cpm=cpm,
                     revenue_share_percentage=segment['revenue_share_percentage']
                 )
             )
@@ -306,7 +333,8 @@ def get_audiences(
 def activate_audience(
     audience_agent_segment_id: str,
     platform: str,
-    account: Optional[str] = None
+    account: Optional[str] = None,
+    principal_id: Optional[str] = None
 ) -> ActivateAudienceResponse:
     """Activate an audience for use on a specific platform/account."""
     
@@ -354,7 +382,7 @@ def activate_audience(
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Check if segment exists
+    # Check if segment exists and principal has access
     cursor.execute(
         "SELECT * FROM audience_segments WHERE id = ?",
         (audience_agent_segment_id,)
@@ -362,6 +390,19 @@ def activate_audience(
     segment = cursor.fetchone()
     if not segment:
         raise ValueError(f"Audience segment '{audience_agent_segment_id}' not found")
+    
+    # Check principal access if specified
+    if principal_id:
+        cursor.execute("SELECT access_level FROM principals WHERE principal_id = ?", (principal_id,))
+        principal_row = cursor.fetchone()
+        if principal_row:
+            principal_access_level = principal_row['access_level']
+            
+            # Check if principal can access this segment
+            if segment['catalog_access'] == 'private' and principal_access_level != 'private':
+                raise ValueError(f"Principal '{principal_id}' does not have access to private segment '{audience_agent_segment_id}'")
+            elif segment['catalog_access'] == 'personalized' and principal_access_level == 'public':
+                raise ValueError(f"Principal '{principal_id}' does not have access to personalized segment '{audience_agent_segment_id}'")
     
     # Check if already activated
     cursor.execute("""
@@ -415,7 +456,8 @@ def activate_audience(
 def check_audience_status(
     audience_agent_segment_id: str,
     decisioning_platform: str,
-    account: Optional[str] = None
+    account: Optional[str] = None,
+    principal_id: Optional[str] = None
 ) -> CheckAudienceStatusResponse:
     """Check the deployment status of an audience on a decisioning platform."""
     
@@ -457,6 +499,22 @@ def check_audience_status(
     # Handle regular database segments
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Check principal access if specified
+    if principal_id:
+        cursor.execute("SELECT * FROM audience_segments WHERE id = ?", (audience_agent_segment_id,))
+        segment = cursor.fetchone()
+        if segment:
+            cursor.execute("SELECT access_level FROM principals WHERE principal_id = ?", (principal_id,))
+            principal_row = cursor.fetchone()
+            if principal_row:
+                principal_access_level = principal_row['access_level']
+                
+                # Check if principal can access this segment
+                if segment['catalog_access'] == 'private' and principal_access_level != 'private':
+                    return CheckAudienceStatusResponse(status="not_found")  # Don't reveal existence
+                elif segment['catalog_access'] == 'personalized' and principal_access_level == 'public':
+                    return CheckAudienceStatusResponse(status="not_found")  # Don't reveal existence
     
     cursor.execute("""
         SELECT * FROM platform_deployments 
