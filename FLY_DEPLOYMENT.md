@@ -103,51 +103,35 @@ fly ssh console
 
 ## Web Interface Setup
 
-Since this is an MCP server, you'll need to set up a web interface for Fly.io. Options:
+The MCP server is configured to use FastMCP's streamable HTTP transport, which provides a modern HTTP-based interface for the Model Context Protocol. This allows direct web access without needing additional servers.
 
-### Option 1: Add a Simple Web Server
+### How it Works
 
-Create `web_server.py`:
-```python
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-import uvicorn
-
-app = FastAPI()
-
-@app.get("/")
-async def root():
-    return JSONResponse({
-        "name": "Audience Agent",
-        "type": "MCP Server",
-        "status": "running",
-        "docs": "https://github.com/adcontextprotocol/audience-agent"
-    })
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy"}
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
-Update Dockerfile CMD:
+The Dockerfile runs FastMCP with HTTP transport:
 ```dockerfile
-CMD ["uv", "run", "python", "web_server.py"]
+CMD ["uv", "run", "fastmcp", "--transport", "http", "--port", "8000", "--host", "0.0.0.0", "main.py"]
 ```
 
-### Option 2: Run MCP Server with HTTP Transport
+This provides:
+- **Streamable HTTP**: Modern HTTP/2 streaming for efficient communication
+- **Direct Web Access**: The MCP server is accessible via HTTP on port 8000
+- **No Additional Servers**: FastMCP handles the HTTP layer directly
 
-Update fly.toml to use a different port since MCP doesn't use HTTP by default:
-```toml
-[processes]
-mcp = "uv run python main.py"
+### Accessing the Server
 
-[http_service]
-  processes = ["mcp"]
-  internal_port = 5173  # MCP default port
+Once deployed, your MCP server will be available at:
 ```
+https://audience-agent.fly.dev
+```
+
+Clients can connect using:
+- MCP-compatible clients that support HTTP transport
+- Direct HTTP API calls to the MCP endpoints
+- Streamable HTTP for real-time updates
+
+### Health Checks
+
+Fly.io will automatically monitor the HTTP endpoint. The FastMCP HTTP transport provides built-in health checks.
 
 ## Managing Multiple Environments
 

@@ -31,13 +31,13 @@
       "enabled": true,
       "test_mode": true,
       "base_url": "https://app.indexexchange.com/api",
-      "username": "emulitz@scope3.com",
-      "password": ""Q3Jb3dLPJTHMGr!",
+      "username": "your-username@example.com",
+      "password": "your-password-here",
       "cache_duration_seconds": 60,
       "principal_accounts": {
-        "acme_corp": "1489997",
-        "luxury_brands_inc": "1497965",
-        "auto_manufacturer": "1502624"
+        "acme_corp": "your-account-id-1",
+        "luxury_brands_inc": "your-account-id-2",
+        "auto_manufacturer": "your-account-id-3"
       }
     },
     "the-trade-desk": {

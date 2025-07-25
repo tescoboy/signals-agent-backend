@@ -25,5 +25,5 @@ RUN uv run python database.py
 # Expose port for web demo
 EXPOSE 8000
 
-# Default command (can be overridden)
-CMD ["uv", "run", "python", "main.py"]
+# Default command - run FastMCP with streamable HTTP transport for web access
+CMD ["uv", "run", "fastmcp", "run", "--transport", "http", "--host", "0.0.0.0", "--port", "8000", "main.py"]
