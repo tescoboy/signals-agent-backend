@@ -20,10 +20,6 @@ from config_loader import load_config
 # In-memory storage for custom segments and activations
 custom_segments: Dict[str, Dict] = {}
 segment_activations: Dict[str, Dict] = {}
-        exit(1)
-    except json.JSONDecodeError:
-        print("Error: Could not decode config.json. Please check its format.")
-        exit(1)
 
 
 def get_db_connection():
