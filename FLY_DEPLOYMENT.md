@@ -37,6 +37,12 @@ fly secrets set IX_USERNAME="your-ix-username"
 fly secrets set IX_PASSWORD="your-ix-password"
 ```
 
+3. Set LiveRamp credentials (if using):
+```bash
+fly secrets set LIVERAMP_CLIENT_ID="your-liveramp-client-id"
+fly secrets set LIVERAMP_CLIENT_SECRET="your-liveramp-client-secret"
+```
+
 3. Update the application to read from environment variables. Create a file `config_loader.py`:
 ```python
 import os

@@ -44,6 +44,22 @@ def load_config() -> Dict[str, Any]:
                     config['platforms']['index-exchange']['principal_accounts'] = mappings
                 except json.JSONDecodeError:
                     print(f"Warning: Invalid IX_ACCOUNT_MAPPING JSON: {ix_mappings}")
+        
+        # LiveRamp overrides
+        if 'liveramp' in config['platforms']:
+            if lr_client_id := os.environ.get('LIVERAMP_CLIENT_ID'):
+                config['platforms']['liveramp']['client_id'] = lr_client_id
+            
+            if lr_client_secret := os.environ.get('LIVERAMP_CLIENT_SECRET'):
+                config['platforms']['liveramp']['client_secret'] = lr_client_secret
+            
+            # Account mappings (JSON string)
+            if lr_mappings := os.environ.get('LIVERAMP_ACCOUNT_MAPPING'):
+                try:
+                    mappings = json.loads(lr_mappings)
+                    config['platforms']['liveramp']['principal_accounts'] = mappings
+                except json.JSONDecodeError:
+                    print(f"Warning: Invalid LIVERAMP_ACCOUNT_MAPPING JSON: {lr_mappings}")
     
     # Database path override (useful for Docker volumes)
     if db_path := os.environ.get('DATABASE_PATH'):

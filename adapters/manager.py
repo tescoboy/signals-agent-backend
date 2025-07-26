@@ -48,6 +48,11 @@ class AdapterManager:
                 return 'TestIndexExchangeAdapter', 'adapters.test_index_exchange'
             else:
                 return 'IndexExchangeAdapter', 'adapters.index_exchange'
+        elif platform_name == 'liveramp':
+            if test_mode:
+                return 'TestLiveRampAdapter', 'adapters.test_liveramp'
+            else:
+                return 'LiveRampAdapter', 'adapters.liveramp'
         elif platform_name == 'the-trade-desk':
             return 'TheTradeDeskAdapter', 'adapters.the_trade_desk'
         elif platform_name == 'openx':

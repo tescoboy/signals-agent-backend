@@ -46,6 +46,17 @@
       "base_url": "https://api.thetradedesk.com",
       "cache_duration_seconds": 60,
       "principal_accounts": {}
+    },
+    "liveramp": {
+      "enabled": false,
+      "base_url": "https://api.liveramp.com",
+      "client_id": "your-liveramp-client-id",
+      "client_secret": "your-liveramp-client-secret",
+      "cache_duration_seconds": 60,
+      "principal_accounts": {
+        "acme_corp": "your-liveramp-account-id-1",
+        "luxury_brands_inc": "your-liveramp-account-id-2"
+      }
     }
   },
   "gemini_api_key": "your-gemini-api-key-here"

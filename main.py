@@ -209,6 +209,7 @@ def get_audience_examples() -> Dict[str, Any]:
         "available_platforms": [
             "the-trade-desk",
             "index-exchange",
+            "liveramp",
             "openx",
             "pubmatic",
             "google-dv360",
