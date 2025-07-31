@@ -1,6 +1,6 @@
-# 🎯 Audience Agent Live Demo Guide
+# 🎯 Signals Agent Live Demo Guide
 
-Welcome to the Audience Activation Protocol live demo! This guide will walk you through testing the AI-powered audience discovery system.
+Welcome to the Signals Activation Protocol live demo! This guide will walk you through testing the AI-powered signal discovery system.
 
 ## 🚀 Quick Start (GitHub Codespaces)
 
@@ -27,16 +27,16 @@ uv run python client.py
 
 This opens a beautiful command-line interface where you can:
 
-- Enter natural language audience queries
+- Enter natural language signal queries
 - See AI-ranked results in attractive tables
 - View custom segment proposals with activation IDs  
 - Test the full activation lifecycle
 
 ### Example Queries to Try:
-- "Luxury automotive buyers interested in BMW and Mercedes"
-- "High-income consumers interested in premium brands"
-- "Technology enthusiasts who buy expensive gadgets"
-- "Parents shopping for children's products"
+- "Luxury automotive signals for BMW and Mercedes buyers"
+- "High-income consumer signals for premium brands"
+- "Technology enthusiast signals for expensive gadget buyers"
+- "Parent shopping signals for children's products"
 
 ## 💻 Quick Search Mode
 
@@ -52,7 +52,7 @@ This gives you instant results without the interactive menu.
 
 When you run `uv run python client.py`, you'll see a menu with these commands:
 
-- **discover**: Search for audiences with natural language
+- **discover**: Search for signals with natural language
 - **activate**: Activate a segment for a platform  
 - **status**: Check deployment status
 - **help**: Show command help
@@ -61,7 +61,7 @@ When you run `uv run python client.py`, you'll see a menu with these commands:
 ## 🎯 What You'll See
 
 ### Real Data
-- 56 authentic Peer39 audience segments from Index Exchange
+- 56 authentic signal segments from various providers including Peer39
 - Realistic CPM pricing ($0.50 - $8.50 based on segment specificity)
 - 6 major SSP platforms (Index Exchange, The Trade Desk, OpenX, etc.)
 
@@ -80,7 +80,7 @@ When you run `uv run python client.py`, you'll see a menu with these commands:
 
 The most interesting feature is custom segment creation:
 
-1. **Search** for any audience (e.g., "BMW luxury buyers")
+1. **Search** for any signal (e.g., "BMW luxury buyer signals")
 2. **Note the Custom Segment IDs** in the proposals section (e.g., `custom_1_1234`)
 3. **Activate** using that ID - this simulates creating the segment from scratch
 4. **Check Status** - custom segments take 120 minutes vs 60 for existing ones
@@ -91,13 +91,13 @@ This demo showcases:
 - **MCP Protocol**: Full Model Context Protocol implementation via interactive client
 - **FastMCP Framework**: Modern Python MCP server  
 - **Pydantic Schemas**: Type-safe request/response validation
-- **SQLite Database**: Real audience segment data
+- **SQLite Database**: Real signal segment data
 - **Google Gemini**: AI-powered ranking and proposals
 - **Rich CLI**: Beautiful command-line tables and interface
 
 ## 📚 Learn More
 
-- [Protocol Specification](https://github.com/adcontextprotocol/audience-agent/blob/main/README.md)
+- [Protocol Specification](https://github.com/adcontextprotocol/signals-agent/blob/main/README.md)
 - [Ad Context Protocol](https://github.com/adcontextprotocol)
 - [Model Context Protocol](https://modelcontextprotocol.io)
 
@@ -112,5 +112,5 @@ This demo showcases:
 - Check if you have Codespaces enabled on your GitHub account
 
 **Need help?**
-- Open an issue on [GitHub](https://github.com/adcontextprotocol/audience-agent/issues)
+- Open an issue on [GitHub](https://github.com/adcontextprotocol/signals-agent/issues)
 - The demo includes realistic sample data, so some queries may return fewer results

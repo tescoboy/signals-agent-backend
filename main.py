@@ -1,4 +1,4 @@
-"""Main MCP server implementation for the Audience Activation Protocol."""
+"""Main MCP server implementation for the Signals Activation Protocol."""
 
 import json
 import sqlite3
@@ -24,13 +24,13 @@ segment_activations: Dict[str, Dict] = {}
 
 def get_db_connection():
     """Get database connection with row factory."""
-    conn = sqlite3.connect('audience_agent.db')
+    conn = sqlite3.connect('signals_agent.db')
     conn.row_factory = sqlite3.Row
     return conn
 
 
-def rank_audiences_with_ai(audience_spec: str, segments: List[Dict], max_results: int = 10) -> List[Dict]:
-    """Use Gemini to intelligently rank audience segments based on the specification."""
+def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: int = 10) -> List[Dict]:
+    """Use Gemini to intelligently rank signals based on the specification."""
     if not segments:
         return []
     
@@ -46,15 +46,24 @@ def rank_audiences_with_ai(audience_spec: str, segments: List[Dict], max_results
         })
     
     prompt = f"""
-    You are an expert audience targeting analyst. A client has requested audiences for: "{audience_spec}"
+    You are an expert signals targeting analyst. A client has requested signals for: "{signal_spec}"
     
-    Here are available audience segments from Peer39:
+    Here are available signal segments from various providers, including different signal types:
+    - Audience signals: demographic/behavioral targeting
+    - Contextual signals: content-based targeting
+    - Geographical signals: location-based targeting
+    - Temporal signals: time-based targeting
+    - Environmental signals: weather/events/conditions
+    - Bidding signals: custom bidding strategies
+    
+    Available segments:
     {json.dumps(segment_data, indent=2)}
     
     Please:
     1. Rank these segments by relevance to the client's request (most relevant first)
-    2. Select the top {max_results} most relevant segments
-    3. For each selected segment, provide a brief explanation of why it matches the request
+    2. Consider all signal types - the client may benefit from multiple types
+    3. Select the top {max_results} most relevant segments
+    4. For each selected segment, provide a brief explanation of why it matches the request
     
     Return your response as a JSON array with this structure:
     [
@@ -96,13 +105,13 @@ def rank_audiences_with_ai(audience_spec: str, segments: List[Dict], max_results
         return segments[:max_results]
 
 
-def generate_custom_segment_proposals(audience_spec: str, existing_segments: List[Dict]) -> List[Dict]:
+def generate_custom_segment_proposals(signal_spec: str, existing_segments: List[Dict]) -> List[Dict]:
     """Use Gemini to propose custom segments that could be created for this query."""
     
     existing_names = [seg["name"] for seg in existing_segments]
     
     prompt = f"""
-    You are a contextual audience targeting expert. A client is looking for: "{audience_spec}"
+    You are a contextual signal targeting expert. A client is looking for: "{signal_spec}"
     
     We found these existing Peer39 segments:
     {json.dumps(existing_names, indent=2)}
@@ -119,7 +128,7 @@ def generate_custom_segment_proposals(audience_spec: str, existing_segments: Lis
       {{
         "proposed_name": "Specific segment name",
         "description": "Detailed description of what content/context this targets",
-        "target_audience": "Who this reaches (demographics/psychographics)",
+        "target_signals": "What signals this captures (audiences, contexts, behaviors)",
         "estimated_coverage_percentage": 2.5,
         "estimated_cpm": 6.50,
         "creation_rationale": "Why this segment would be valuable and what signals would be used"
@@ -151,26 +160,26 @@ model = genai.GenerativeModel('gemini-2.0-flash-exp')
 # Initialize platform adapters
 adapter_manager = AdapterManager(config)
 
-mcp = FastMCP(name="AudienceActivationAgent")
+mcp = FastMCP(name="SignalsActivationAgent")
 console = Console()
 
 
 # --- MCP Tools ---
 
 @mcp.tool
-def get_audience_examples() -> Dict[str, Any]:
+def get_signal_examples() -> Dict[str, Any]:
     """
-    Get examples of how to use the audience discovery tools.
+    Get examples of how to use the signal discovery tools.
     
     Returns common usage patterns and platform configurations.
     """
     return {
-        "description": "Examples for using the Audience Activation Protocol",
-        "get_audiences_examples": [
+        "description": "Examples for using the Signals Activation Protocol",
+        "get_signals_examples": [
             {
-                "description": "Search all platforms for luxury audiences",
+                "description": "Search all platforms for luxury signals",
                 "request": {
-                    "audience_spec": "luxury car buyers in California",
+                    "signal_spec": "luxury car buyers in California",
                     "deliver_to": {
                         "platforms": "all",
                         "countries": ["US"]
@@ -180,7 +189,7 @@ def get_audience_examples() -> Dict[str, Any]:
             {
                 "description": "Search specific platforms with account",
                 "request": {
-                    "audience_spec": "parents with young children",
+                    "signal_spec": "parents with young children",
                     "deliver_to": {
                         "platforms": [
                             {"platform": "the-trade-desk"},
@@ -194,7 +203,7 @@ def get_audience_examples() -> Dict[str, Any]:
             {
                 "description": "Search with price filters",
                 "request": {
-                    "audience_spec": "budget-conscious travelers",
+                    "signal_spec": "budget-conscious travelers",
                     "deliver_to": {
                         "platforms": "all",
                         "countries": ["US"]
@@ -224,25 +233,25 @@ def get_audience_examples() -> Dict[str, Any]:
 
 
 @mcp.tool
-def get_audiences(
-    audience_spec: str,
+def get_signals(
+    signal_spec: str,
     deliver_to: DeliverySpecification,
-    filters: Optional[AudienceFilters] = None,
+    filters: Optional[SignalFilters] = None,
     max_results: Optional[int] = 10,
     principal_id: Optional[str] = None
-) -> GetAudiencesResponse:
+) -> GetSignalsResponse:
     """
-    Discover relevant audiences based on a marketing specification.
+    Discover relevant signals based on a marketing specification.
     
-    This tool uses AI to match your natural language audience description with available segments
+    This tool uses AI to match your natural language signal description with available segments
     across multiple decisioning platforms.
     
     Args:
-        audience_spec: Natural language description of your target audience
+        signal_spec: Natural language description of your target signals
                       Examples: "luxury car buyers", "parents with young children", 
                                 "high-income travelers"
         
-        deliver_to: Where to search for audiences
+        deliver_to: Where to search for signals
                     - Set platforms to "all" to search across all platforms
                     - Or specify specific platforms like:
                       {"platforms": [{"platform": "the-trade-desk"}, 
@@ -250,13 +259,13 @@ def get_audiences(
         
         filters: Optional filters to refine results (max_cpm, min_coverage, etc.)
         
-        max_results: Number of audiences to return (1-100, default 10)
+        max_results: Number of signals to return (1-100, default 10)
         
         principal_id: Your account ID for accessing private catalogs and custom pricing
                       Examples: "acme_corp", "agency_123"
     
     Returns:
-        List of matching audiences with deployment status, pricing, and AI-generated
+        List of matching signals with deployment status, pricing, and AI-generated
         match explanations. Also includes custom segment proposals when relevant.
     """
     
@@ -280,7 +289,7 @@ def get_audiences(
         catalog_filter = "catalog_access IN ('public', 'personalized', 'private')"
     
     query = f"""
-        SELECT * FROM audience_segments 
+        SELECT * FROM signal_segments 
         WHERE {catalog_filter}
     """
     params = []
@@ -288,7 +297,7 @@ def get_audiences(
     if filters:
         if filters.catalog_types:
             placeholders = ','.join('?' * len(filters.catalog_types))
-            query += f" AND audience_type IN ({placeholders})"
+            query += f" AND signal_type IN ({placeholders})"
             params.extend(filters.catalog_types)
         
         if filters.data_providers:
@@ -305,9 +314,9 @@ def get_audiences(
             params.append(filters.min_coverage_percentage)
     
     # Apply flexible text matching on name and description
-    if audience_spec:
+    if signal_spec:
         # Split the spec into individual words for better matching
-        words = audience_spec.lower().split()
+        words = signal_spec.lower().split()
         word_conditions = []
         for word in words:
             word_conditions.append("(LOWER(name) LIKE ? OR LOWER(description) LIKE ?)")
@@ -339,10 +348,10 @@ def get_audiences(
     # Combine database and platform segments
     all_segments = db_segments + platform_segments
     
-    # Use AI to rank segments by relevance to the audience spec
-    ranked_segments = rank_audiences_with_ai(audience_spec, all_segments, max_results or 10)
+    # Use AI to rank segments by relevance to the signal spec
+    ranked_segments = rank_signals_with_ai(signal_spec, all_segments, max_results or 10)
     
-    audiences = []
+    signals = []
     for segment in ranked_segments:
         platform_deployments = []
         
@@ -371,7 +380,7 @@ def get_audiences(
             if include_platform:
                 # Create a deployment record for the platform segment
                 platform_deployments = [PlatformDeployment(
-                    audience_agent_segment_id=segment['id'],
+                    signals_agent_segment_id=segment['id'],
                     platform=platform_name,
                     account=account_id,
                     decisioning_platform_segment_id=segment.get('platform_segment_id', segment['id']),
@@ -384,7 +393,7 @@ def get_audiences(
             # This is a database segment - get platform deployments as before
             cursor.execute("""
                 SELECT * FROM platform_deployments 
-                WHERE audience_agent_segment_id = ?
+                WHERE signals_agent_segment_id = ?
             """, (segment['id'],))
             deployments = [dict(row) for row in cursor.fetchall()]
             
@@ -415,17 +424,17 @@ def get_audiences(
                 # Only check database for custom pricing on database segments
                 cursor.execute("""
                     SELECT custom_cpm FROM principal_segment_access 
-                    WHERE principal_id = ? AND audience_agent_segment_id = ? AND custom_cpm IS NOT NULL
+                    WHERE principal_id = ? AND signals_agent_segment_id = ? AND custom_cpm IS NOT NULL
                 """, (principal_id, segment['id']))
                 custom_pricing = cursor.fetchone()
                 if custom_pricing:
                     cpm = custom_pricing['custom_cpm']
             
-            audience = AudienceResponse(
-                audience_agent_segment_id=segment['id'],
+            signal = SignalResponse(
+                signals_agent_segment_id=segment['id'],
                 name=segment['name'],
                 description=segment['description'],
-                audience_type=segment['audience_type'],
+                signal_type=segment.get('signal_type', segment.get('audience_type', 'audience')),
                 data_provider=segment['data_provider'],
                 coverage_percentage=segment['coverage_percentage'],
                 deployments=platform_deployments,
@@ -436,12 +445,12 @@ def get_audiences(
                 has_coverage_data=segment.get('has_coverage_data', True),  # Database segments have coverage
                 has_pricing_data=segment.get('has_pricing_data', True)  # Database segments have pricing
             )
-            audiences.append(audience)
+            signals.append(signal)
     
     # Generate custom segment proposals
     custom_proposals = []
-    if audiences:  # Only generate proposals if we found some existing segments
-        proposal_data = generate_custom_segment_proposals(audience_spec, ranked_segments)
+    if signals:  # Only generate proposals if we found some existing segments
+        proposal_data = generate_custom_segment_proposals(signal_spec, ranked_segments)
         for proposal in proposal_data:
             # Generate unique ID for custom segment
             custom_id = f"custom_{len(custom_segments) + 1}_{hash(proposal['proposed_name']) % 10000}"
@@ -450,8 +459,8 @@ def get_audiences(
             custom_segments[custom_id] = {
                 "id": custom_id,
                 "name": proposal['proposed_name'],
-                "description": f"Custom segment: {proposal['target_audience']}",
-                "audience_type": "custom",
+                "description": f"Custom segment: {proposal.get('target_signals', proposal.get('target_audience', ''))}",
+                "signal_type": "custom",
                 "data_provider": "Custom AI Generated",
                 "coverage_percentage": proposal['estimated_coverage_percentage'],
                 "base_cpm": proposal['estimated_cpm'],
@@ -469,30 +478,30 @@ def get_audiences(
             custom_proposals.append(proposal_with_id)
     
     conn.close()
-    return GetAudiencesResponse(
-        audiences=audiences,
+    return GetSignalsResponse(
+        signals=signals,
         custom_segment_proposals=custom_proposals if custom_proposals else None
     )
 
 
 @mcp.tool
-def activate_audience(
-    audience_agent_segment_id: str,
+def activate_signal(
+    signals_agent_segment_id: str,
     platform: str,
     account: Optional[str] = None,
     principal_id: Optional[str] = None
-) -> ActivateAudienceResponse:
-    """Activate an audience for use on a specific platform/account."""
+) -> ActivateSignalResponse:
+    """Activate a signal for use on a specific platform/account."""
     
     # Check if this is a custom segment
-    if audience_agent_segment_id.startswith("custom_"):
-        if audience_agent_segment_id not in custom_segments:
-            raise ValueError(f"Custom segment '{audience_agent_segment_id}' not found")
+    if signals_agent_segment_id.startswith("custom_"):
+        if signals_agent_segment_id not in custom_segments:
+            raise ValueError(f"Custom segment '{signals_agent_segment_id}' not found")
         
-        segment = custom_segments[audience_agent_segment_id]
+        segment = custom_segments[signals_agent_segment_id]
         
         # Check if already activated
-        activation_key = f"{audience_agent_segment_id}_{platform}_{account or 'default'}"
+        activation_key = f"{signals_agent_segment_id}_{platform}_{account or 'default'}"
         if activation_key in segment_activations:
             existing = segment_activations[activation_key]
             if existing.get('status') == 'deployed':
@@ -500,14 +509,14 @@ def activate_audience(
         
         # Generate platform segment ID
         account_suffix = f"_{account}" if account else ""
-        decisioning_platform_segment_id = f"{platform}_{audience_agent_segment_id}{account_suffix}"
+        decisioning_platform_segment_id = f"{platform}_{signals_agent_segment_id}{account_suffix}"
         
         # Simulate custom segment creation process
         activation_duration = 120  # Custom segments take longer to create
         
         # Store activation record
         segment_activations[activation_key] = {
-            "audience_agent_segment_id": audience_agent_segment_id,
+            "signals_agent_segment_id": signals_agent_segment_id,
             "platform": platform,
             "account": account,
             "decisioning_platform_segment_id": decisioning_platform_segment_id,
@@ -519,7 +528,7 @@ def activate_audience(
         console.print(f"[bold cyan]Creating and activating custom segment '{segment['name']}' on {platform}[/bold cyan]")
         console.print(f"[dim]This involves building the segment from scratch, estimated duration: {activation_duration} minutes[/dim]")
         
-        return ActivateAudienceResponse(
+        return ActivateSignalResponse(
             decisioning_platform_segment_id=decisioning_platform_segment_id,
             estimated_activation_duration_minutes=activation_duration
         )
@@ -530,12 +539,12 @@ def activate_audience(
     
     # Check if segment exists and principal has access
     cursor.execute(
-        "SELECT * FROM audience_segments WHERE id = ?",
-        (audience_agent_segment_id,)
+        "SELECT * FROM signal_segments WHERE id = ?",
+        (signals_agent_segment_id,)
     )
     segment = cursor.fetchone()
     if not segment:
-        raise ValueError(f"Audience segment '{audience_agent_segment_id}' not found")
+        raise ValueError(f"Signal segment '{signals_agent_segment_id}' not found")
     
     # Check principal access if specified
     if principal_id:
@@ -546,23 +555,23 @@ def activate_audience(
             
             # Check if principal can access this segment
             if segment['catalog_access'] == 'private' and principal_access_level != 'private':
-                raise ValueError(f"Principal '{principal_id}' does not have access to private segment '{audience_agent_segment_id}'")
+                raise ValueError(f"Principal '{principal_id}' does not have access to private segment '{signals_agent_segment_id}'")
             elif segment['catalog_access'] == 'personalized' and principal_access_level == 'public':
-                raise ValueError(f"Principal '{principal_id}' does not have access to personalized segment '{audience_agent_segment_id}'")
+                raise ValueError(f"Principal '{principal_id}' does not have access to personalized segment '{signals_agent_segment_id}'")
     
     # Check if already activated
     cursor.execute("""
         SELECT * FROM platform_deployments 
-        WHERE audience_agent_segment_id = ? AND platform = ? AND account IS ?
-    """, (audience_agent_segment_id, platform, account))
+        WHERE signals_agent_segment_id = ? AND platform = ? AND account IS ?
+    """, (signals_agent_segment_id, platform, account))
     
     existing = cursor.fetchone()
     if existing and existing['is_live']:
-        raise ValueError("Audience already activated for this platform/account")
+        raise ValueError("Signal already activated for this platform/account")
     
     # Generate platform segment ID
     account_suffix = f"_{account}" if account else ""
-    decisioning_platform_segment_id = f"{platform}_{audience_agent_segment_id}{account_suffix}"
+    decisioning_platform_segment_id = f"{platform}_{signals_agent_segment_id}{account_suffix}"
     
     # Create or update deployment record
     scope = "account-specific" if account else "platform-wide"
@@ -574,23 +583,23 @@ def activate_audience(
             UPDATE platform_deployments 
             SET decisioning_platform_segment_id = ?, is_live = 0, 
                 estimated_activation_duration_minutes = ?
-            WHERE audience_agent_segment_id = ? AND platform = ? AND account IS ?
+            WHERE signals_agent_segment_id = ? AND platform = ? AND account IS ?
         """, (decisioning_platform_segment_id, activation_duration, 
-              audience_agent_segment_id, platform, account))
+              signals_agent_segment_id, platform, account))
     else:
         # Insert new record
         cursor.execute("""
             INSERT INTO platform_deployments 
-            (audience_agent_segment_id, platform, account, decisioning_platform_segment_id, 
+            (signals_agent_segment_id, platform, account, decisioning_platform_segment_id, 
              scope, is_live, estimated_activation_duration_minutes)
             VALUES (?, ?, ?, ?, ?, 0, ?)
-        """, (audience_agent_segment_id, platform, account, decisioning_platform_segment_id,
+        """, (signals_agent_segment_id, platform, account, decisioning_platform_segment_id,
               scope, activation_duration))
     
     conn.commit()
     conn.close()
     
-    console.print(f"[bold green]Activating audience {audience_agent_segment_id} on {platform}[/bold green]")
+    console.print(f"[bold green]Activating signal {signals_agent_segment_id} on {platform}[/bold green]")
     
     return ActivateAudienceResponse(
         decisioning_platform_segment_id=decisioning_platform_segment_id,
@@ -599,25 +608,25 @@ def activate_audience(
 
 
 @mcp.tool
-def check_audience_status(
-    audience_agent_segment_id: str,
+def check_signal_status(
+    signals_agent_segment_id: str,
     decisioning_platform: str,
     account: Optional[str] = None,
     principal_id: Optional[str] = None
-) -> CheckAudienceStatusResponse:
-    """Check the deployment status of an audience on a decisioning platform."""
+) -> CheckSignalStatusResponse:
+    """Check the deployment status of a signal on a decisioning platform."""
     
     # Check if this is a custom segment
-    if audience_agent_segment_id.startswith("custom_"):
-        activation_key = f"{audience_agent_segment_id}_{decisioning_platform}_{account or 'default'}"
+    if signals_agent_segment_id.startswith("custom_"):
+        activation_key = f"{signals_agent_segment_id}_{decisioning_platform}_{account or 'default'}"
         
         if activation_key not in segment_activations:
-            return CheckAudienceStatusResponse(status="not_found")
+            return CheckSignalStatusResponse(status="not_found")
         
         activation = segment_activations[activation_key]
         
         if activation['status'] == 'deployed':
-            return CheckAudienceStatusResponse(
+            return CheckSignalStatusResponse(
                 status="deployed",
                 deployed_at=datetime.fromisoformat(activation.get('deployed_at', activation['activation_started_at']))
             )
@@ -630,17 +639,17 @@ def check_audience_status(
                 activation['deployed_at'] = datetime.now().isoformat()
                 segment_activations[activation_key] = activation
                 
-                console.print(f"[bold green]Custom segment '{audience_agent_segment_id}' is now live on {decisioning_platform}[/bold green]")
+                console.print(f"[bold green]Custom segment '{signals_agent_segment_id}' is now live on {decisioning_platform}[/bold green]")
                 
-                return CheckAudienceStatusResponse(
+                return CheckSignalStatusResponse(
                     status="deployed",
                     deployed_at=datetime.now()
                 )
             else:
                 # Still activating
-                return CheckAudienceStatusResponse(status="activating")
+                return CheckSignalStatusResponse(status="activating")
         
-        return CheckAudienceStatusResponse(status="failed")
+        return CheckSignalStatusResponse(status="failed")
     
     # Handle regular database segments
     conn = get_db_connection()
@@ -648,7 +657,7 @@ def check_audience_status(
     
     # Check principal access if specified
     if principal_id:
-        cursor.execute("SELECT * FROM audience_segments WHERE id = ?", (audience_agent_segment_id,))
+        cursor.execute("SELECT * FROM signal_segments WHERE id = ?", (signals_agent_segment_id,))
         segment = cursor.fetchone()
         if segment:
             cursor.execute("SELECT access_level FROM principals WHERE principal_id = ?", (principal_id,))
@@ -658,24 +667,24 @@ def check_audience_status(
                 
                 # Check if principal can access this segment
                 if segment['catalog_access'] == 'private' and principal_access_level != 'private':
-                    return CheckAudienceStatusResponse(status="not_found")  # Don't reveal existence
+                    return CheckSignalStatusResponse(status="not_found")  # Don't reveal existence
                 elif segment['catalog_access'] == 'personalized' and principal_access_level == 'public':
-                    return CheckAudienceStatusResponse(status="not_found")  # Don't reveal existence
+                    return CheckSignalStatusResponse(status="not_found")  # Don't reveal existence
     
     cursor.execute("""
         SELECT * FROM platform_deployments 
-        WHERE audience_agent_segment_id = ? AND platform = ? AND account IS ?
-    """, (audience_agent_segment_id, decisioning_platform, account))
+        WHERE signals_agent_segment_id = ? AND platform = ? AND account IS ?
+    """, (signals_agent_segment_id, decisioning_platform, account))
     
     deployment = cursor.fetchone()
     
     if not deployment:
         conn.close()
-        return CheckAudienceStatusResponse(status="not_found")
+        return CheckSignalStatusResponse(status="not_found")
     
     if deployment['is_live']:
         conn.close()
-        return CheckAudienceStatusResponse(
+        return CheckSignalStatusResponse(
             status="deployed",
             deployed_at=datetime.fromisoformat(deployment['deployed_at']) if deployment['deployed_at'] else None
         )
@@ -684,12 +693,12 @@ def check_audience_status(
         cursor.execute("""
             UPDATE platform_deployments 
             SET is_live = 1, deployed_at = ?
-            WHERE audience_agent_segment_id = ? AND platform = ? AND account IS ?
-        """, (datetime.now().isoformat(), audience_agent_segment_id, decisioning_platform, account))
+            WHERE signals_agent_segment_id = ? AND platform = ? AND account IS ?
+        """, (datetime.now().isoformat(), signals_agent_segment_id, decisioning_platform, account))
         conn.commit()
         conn.close()
         
-        return CheckAudienceStatusResponse(
+        return CheckSignalStatusResponse(
             status="deployed",
             deployed_at=datetime.now()
         )

@@ -2,12 +2,12 @@
   "agent_config": {
     "agent_type": "marketplace",
     "catalog_access": "public",
-    "name": "Sample Audience Agent",
-    "description": "Reference implementation of audience activation protocol"
+    "name": "Sample Signals Agent",
+    "description": "Reference implementation of signals activation protocol"
   },
   "database": {
     "type": "sqlite",
-    "path": "audience_agent.db"
+    "path": "signals_agent.db"
   },
   "supported_platforms": [
     "the-trade-desk",

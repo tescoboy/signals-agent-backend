@@ -1,4 +1,4 @@
-"""Database initialization and sample data for the Audience Agent."""
+"""Database initialization and sample data for the Signals Agent."""
 
 import sqlite3
 from datetime import datetime
@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 
 def init_db():
     """Initialize the database with tables and sample data."""
-    conn = sqlite3.connect('audience_agent.db')
+    conn = sqlite3.connect('signals_agent.db')
     cursor = conn.cursor()
     
     # Create tables
@@ -24,15 +24,15 @@ def init_db():
 def create_tables(cursor: sqlite3.Cursor):
     """Create all database tables."""
     
-    # Audience segments table
+    # Signal segments table
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS audience_segments (
+        CREATE TABLE IF NOT EXISTS signal_segments (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             description TEXT NOT NULL,
             data_provider TEXT NOT NULL,
             coverage_percentage REAL NOT NULL,
-            audience_type TEXT NOT NULL CHECK (audience_type IN ('private', 'marketplace')),
+            signal_type TEXT NOT NULL CHECK (signal_type IN ('private', 'marketplace', 'audience', 'bidding', 'contextual', 'geographical', 'temporal', 'environmental')),
             catalog_access TEXT NOT NULL CHECK (catalog_access IN ('public', 'personalized', 'private')),
             base_cpm REAL NOT NULL,
             revenue_share_percentage REAL,
@@ -57,14 +57,14 @@ def create_tables(cursor: sqlite3.Cursor):
         CREATE TABLE IF NOT EXISTS principal_segment_access (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             principal_id TEXT NOT NULL,
-            audience_agent_segment_id TEXT NOT NULL,
+            signals_agent_segment_id TEXT NOT NULL,
             access_type TEXT NOT NULL CHECK (access_type IN ('granted', 'custom_pricing')),
             custom_cpm REAL,
             notes TEXT,
             created_at TEXT NOT NULL,
             FOREIGN KEY (principal_id) REFERENCES principals (principal_id),
-            FOREIGN KEY (audience_agent_segment_id) REFERENCES audience_segments (id),
-            UNIQUE(principal_id, audience_agent_segment_id)
+            FOREIGN KEY (signals_agent_segment_id) REFERENCES signal_segments (id),
+            UNIQUE(principal_id, signals_agent_segment_id)
         )
     """)
     
@@ -72,7 +72,7 @@ def create_tables(cursor: sqlite3.Cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS platform_deployments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            audience_agent_segment_id TEXT NOT NULL,
+            signals_agent_segment_id TEXT NOT NULL,
             platform TEXT NOT NULL,
             account TEXT,
             decisioning_platform_segment_id TEXT,
@@ -80,19 +80,19 @@ def create_tables(cursor: sqlite3.Cursor):
             is_live BOOLEAN NOT NULL DEFAULT 0,
             deployed_at TEXT,
             estimated_activation_duration_minutes INTEGER NOT NULL DEFAULT 60,
-            FOREIGN KEY (audience_agent_segment_id) REFERENCES audience_segments (id),
-            UNIQUE(audience_agent_segment_id, platform, account)
+            FOREIGN KEY (signals_agent_segment_id) REFERENCES signal_segments (id),
+            UNIQUE(signals_agent_segment_id, platform, account)
         )
     """)
     
 
 
 def insert_sample_data(cursor: sqlite3.Cursor):
-    """Insert sample audience segments and platform deployments."""
+    """Insert sample signal segments and platform deployments."""
     
     now = datetime.now().isoformat()
     
-    # Sample audience segments
+    # Sample signal segments
     segments = [
         {
             'id': 'sports_enthusiasts_public',
@@ -100,7 +100,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'description': 'Broad sports audience available platform-wide',
             'data_provider': 'Polk',
             'coverage_percentage': 45.0,
-            'audience_type': 'marketplace',
+            'signal_type': 'audience',
             'catalog_access': 'public',
             'base_cpm': 3.50,
             'revenue_share_percentage': 15.0,
@@ -111,7 +111,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'description': 'High-income individuals showing luxury car purchase intent',
             'data_provider': 'Experian',
             'coverage_percentage': 12.5,
-            'audience_type': 'marketplace',
+            'signal_type': 'audience',
             'catalog_access': 'personalized',
             'base_cpm': 8.75,
             'revenue_share_percentage': 20.0,
@@ -122,7 +122,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'description': 'Pages with luxury automotive content and high viewability',
             'data_provider': 'Peer39',
             'coverage_percentage': 15.0,
-            'audience_type': 'marketplace',
+            'signal_type': 'audience',
             'catalog_access': 'public',
             'base_cpm': 2.50,
             'revenue_share_percentage': 12.0,
@@ -133,7 +133,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'description': 'High-income consumers who purchase premium athletic equipment',
             'data_provider': 'Acxiom',
             'coverage_percentage': 8.3,
-            'audience_type': 'marketplace',
+            'signal_type': 'audience',
             'catalog_access': 'personalized',
             'base_cpm': 6.25,
             'revenue_share_percentage': 18.0,
@@ -144,7 +144,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'description': 'Millennials living in major urban markets with disposable income',
             'data_provider': 'LiveRamp',
             'coverage_percentage': 32.0,
-            'audience_type': 'marketplace',
+            'signal_type': 'audience',
             'catalog_access': 'public',
             'base_cpm': 4.00,
             'revenue_share_percentage': 15.0,
@@ -155,24 +155,69 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'description': 'Proprietary first-party audience segments',
             'data_provider': 'Internal',
             'coverage_percentage': 100.0,
-            'audience_type': 'private',
+            'signal_type': 'audience',
             'catalog_access': 'private',
             'base_cpm': 0.00,
             'revenue_share_percentage': None,
+        },
+        # New signal types examples
+        {
+            'id': 'weather_based_targeting',
+            'name': 'Weather-Based Targeting',
+            'description': 'Environmental signals for weather conditions (sunny, rainy, cold)',
+            'data_provider': 'WeatherData',
+            'coverage_percentage': 95.0,
+            'signal_type': 'environmental',
+            'catalog_access': 'public',
+            'base_cpm': 1.50,
+            'revenue_share_percentage': 10.0,
+        },
+        {
+            'id': 'geo_urban_centers',
+            'name': 'Major Urban Centers',
+            'description': 'Geographical signals for top 50 US metropolitan areas',
+            'data_provider': 'GeoTarget',
+            'coverage_percentage': 68.0,
+            'signal_type': 'geographical',
+            'catalog_access': 'public',
+            'base_cpm': 2.00,
+            'revenue_share_percentage': 12.0,
+        },
+        {
+            'id': 'prime_time_viewing',
+            'name': 'Prime Time TV Viewing',
+            'description': 'Temporal signals for evening hours (6PM-11PM local time)',
+            'data_provider': 'TimeTarget',
+            'coverage_percentage': 100.0,
+            'signal_type': 'temporal',
+            'catalog_access': 'public',
+            'base_cpm': 3.00,
+            'revenue_share_percentage': 15.0,
+        },
+        {
+            'id': 'contextual_news_finance',
+            'name': 'Financial News Context',
+            'description': 'Contextual signals for financial and business news content',
+            'data_provider': 'Peer39',
+            'coverage_percentage': 22.0,
+            'signal_type': 'contextual',
+            'catalog_access': 'public',
+            'base_cpm': 4.50,
+            'revenue_share_percentage': 18.0,
         }
     ]
     
     for segment in segments:
         cursor.execute("""
-            INSERT OR REPLACE INTO audience_segments 
+            INSERT OR REPLACE INTO signal_segments 
             (id, name, description, data_provider, coverage_percentage, 
-             audience_type, catalog_access, base_cpm, revenue_share_percentage, 
+             signal_type, catalog_access, base_cpm, revenue_share_percentage, 
              created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             segment['id'], segment['name'], segment['description'], 
             segment['data_provider'], segment['coverage_percentage'],
-            segment['audience_type'], segment['catalog_access'],
+            segment['signal_type'], segment['catalog_access'],
             segment['base_cpm'], segment['revenue_share_percentage'],
             now, now
         ))
@@ -181,7 +226,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
     deployments = [
         # Sports enthusiasts - already live on multiple platforms
         {
-            'audience_agent_segment_id': 'sports_enthusiasts_public',
+            'signals_agent_segment_id': 'sports_enthusiasts_public',
             'platform': 'the-trade-desk',
             'account': None,
             'decisioning_platform_segment_id': 'ttd_sports_general',
@@ -191,7 +236,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'estimated_activation_duration_minutes': 60
         },
         {
-            'audience_agent_segment_id': 'sports_enthusiasts_public',
+            'signals_agent_segment_id': 'sports_enthusiasts_public',
             'platform': 'index-exchange',
             'account': None,
             'decisioning_platform_segment_id': 'ix_sports_enthusiasts_public',
@@ -203,7 +248,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
         
         # Luxury auto - mix of live and requiring activation
         {
-            'audience_agent_segment_id': 'peer39_luxury_auto',
+            'signals_agent_segment_id': 'peer39_luxury_auto',
             'platform': 'index-exchange',
             'account': None,
             'decisioning_platform_segment_id': 'ix_peer39_luxury_auto_gen',
@@ -213,7 +258,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'estimated_activation_duration_minutes': 60
         },
         {
-            'audience_agent_segment_id': 'peer39_luxury_auto',
+            'signals_agent_segment_id': 'peer39_luxury_auto',
             'platform': 'openx',
             'account': None,
             'decisioning_platform_segment_id': 'ox_peer39_lux_auto_456',
@@ -223,7 +268,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'estimated_activation_duration_minutes': 60
         },
         {
-            'audience_agent_segment_id': 'peer39_luxury_auto',
+            'signals_agent_segment_id': 'peer39_luxury_auto',
             'platform': 'pubmatic',
             'account': 'brand-456-pm',
             'decisioning_platform_segment_id': None,
@@ -233,7 +278,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'estimated_activation_duration_minutes': 60
         },
         {
-            'audience_agent_segment_id': 'peer39_luxury_auto',
+            'signals_agent_segment_id': 'peer39_luxury_auto',
             'platform': 'index-exchange',
             'account': 'agency-123-ix',
             'decisioning_platform_segment_id': 'ix_agency123_peer39_lux_auto',
@@ -245,7 +290,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
         
         # Urban millennials - live on TTD
         {
-            'audience_agent_segment_id': 'urban_millennials',
+            'signals_agent_segment_id': 'urban_millennials',
             'platform': 'the-trade-desk',
             'account': None,
             'decisioning_platform_segment_id': 'ttd_urban_millennials_gen',
@@ -257,7 +302,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
         
         # Premium running gear - personalized, requiring activation
         {
-            'audience_agent_segment_id': 'running_gear_premium',
+            'signals_agent_segment_id': 'running_gear_premium',
             'platform': 'the-trade-desk',
             'account': 'omnicom-ttd-main',
             'decisioning_platform_segment_id': None,
@@ -271,11 +316,11 @@ def insert_sample_data(cursor: sqlite3.Cursor):
     for deployment in deployments:
         cursor.execute("""
             INSERT OR REPLACE INTO platform_deployments 
-            (audience_agent_segment_id, platform, account, decisioning_platform_segment_id,
+            (signals_agent_segment_id, platform, account, decisioning_platform_segment_id,
              scope, is_live, deployed_at, estimated_activation_duration_minutes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            deployment['audience_agent_segment_id'], deployment['platform'],
+            deployment['signals_agent_segment_id'], deployment['platform'],
             deployment['account'], deployment['decisioning_platform_segment_id'],
             deployment['scope'], deployment['is_live'], deployment['deployed_at'],
             deployment['estimated_activation_duration_minutes']
@@ -330,14 +375,14 @@ def insert_sample_data(cursor: sqlite3.Cursor):
         # ACME Corp gets custom pricing on some segments
         {
             'principal_id': 'acme_corp',
-            'audience_agent_segment_id': 'luxury_auto_intenders',
+            'signals_agent_segment_id': 'luxury_auto_intenders',
             'access_type': 'custom_pricing',
             'custom_cpm': 6.50,  # Discounted from 8.75
             'notes': 'Volume discount for large advertiser'
         },
         {
             'principal_id': 'acme_corp', 
-            'audience_agent_segment_id': 'sports_enthusiasts_public',
+            'signals_agent_segment_id': 'sports_enthusiasts_public',
             'access_type': 'custom_pricing',
             'custom_cpm': 2.75,  # Discounted from 3.50
             'notes': 'Preferred customer pricing'
@@ -346,7 +391,7 @@ def insert_sample_data(cursor: sqlite3.Cursor):
         # Luxury Brands Inc gets exclusive access to luxury segments
         {
             'principal_id': 'luxury_brands_inc',
-            'audience_agent_segment_id': 'luxury_auto_intenders', 
+            'signals_agent_segment_id': 'luxury_auto_intenders', 
             'access_type': 'granted',
             'custom_cpm': None,
             'notes': 'Exclusive access to luxury audience'
@@ -359,10 +404,10 @@ def insert_sample_data(cursor: sqlite3.Cursor):
     for access in principal_access:
         cursor.execute("""
             INSERT OR REPLACE INTO principal_segment_access
-            (principal_id, audience_agent_segment_id, access_type, custom_cpm, notes, created_at)
+            (principal_id, signals_agent_segment_id, access_type, custom_cpm, notes, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
-            access['principal_id'], access['audience_agent_segment_id'], 
+            access['principal_id'], access['signals_agent_segment_id'], 
             access['access_type'], access['custom_cpm'], access['notes'], now
         ))
 
