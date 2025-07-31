@@ -1,7 +1,7 @@
 [project]
-name = "audience-agent"
+name = "signals-agent"
 version = "0.1.0"
-description = "Reference implementation of an Audience Activation Protocol agent"
+description = "Reference implementation of a Signals Activation Protocol agent"
 authors = [
     {name = "Scope3", email = "engineering@scope3.com"}
 ]

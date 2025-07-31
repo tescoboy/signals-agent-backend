@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Interactive client for testing the Audience Activation Protocol."""
+"""Interactive client for testing the Signals Activation Protocol."""
 
 import asyncio
 import json
@@ -18,8 +18,8 @@ console = Console()
 def print_banner():
     """Print the client banner."""
     console.print(Panel(
-        "[bold cyan]🎯 Audience Activation Protocol Client[/bold cyan]\n"
-        "Interactive client for testing audience discovery and activation",
+        "[bold cyan]🎯 Signals Activation Protocol Client[/bold cyan]\n"
+        "Interactive client for testing signal discovery and activation",
         border_style="blue"
     ))
 
@@ -31,20 +31,20 @@ def print_help():
     commands.add_column("Command", style="cyan", width=20)
     commands.add_column("Description", style="white")
     
-    commands.add_row("discover", "Discover audiences with natural language")
-    commands.add_row("activate", "Activate an audience on a platform")
-    commands.add_row("status", "Check audience activation status")
+    commands.add_row("discover", "Discover signals with natural language")
+    commands.add_row("activate", "Activate a signal on a platform")
+    commands.add_row("status", "Check signal activation status")
     commands.add_row("help", "Show this help message")
     commands.add_row("quit", "Exit the client")
     
     console.print(commands)
 
-async def discover_audiences(client: Client):
-    """Interactive audience discovery."""
-    console.print("\n[bold blue]🔍 Audience Discovery[/bold blue]")
+async def discover_signals(client: Client):
+    """Interactive signal discovery."""
+    console.print("\n[bold blue]🔍 Signal Discovery[/bold blue]")
     
-    # Get audience specification
-    audience_spec = Prompt.ask("Describe the audience you're looking for")
+    # Get signal specification
+    signal_spec = Prompt.ask("Describe the signals you're looking for")
     
     # Get platforms
     console.print("\nSelect platforms:")
@@ -77,7 +77,7 @@ async def discover_audiences(client: Client):
         console.print("[yellow]Invalid number, using default of 5[/yellow]")
     
     request_data = {
-        "audience_spec": audience_spec,
+        "signal_spec": signal_spec,
         "deliver_to": {
             "platforms": platforms,
             "countries": ["US"]
@@ -100,8 +100,8 @@ async def discover_audiences(client: Client):
     
     # Make request via MCP
     try:
-        console.print("\n[dim]Searching for audiences...[/dim]")
-        result = await client.call_tool("get_audiences", request_data)
+        console.print("\n[dim]Searching for signals...[/dim]")
+        result = await client.call_tool("get_signals", request_data)
         # Extract the actual response data - use structured_content which is already a dict
         if hasattr(result, 'structured_content') and result.structured_content:
             response = result.structured_content
@@ -109,28 +109,28 @@ async def discover_audiences(client: Client):
             response = result.data.model_dump()
         else:
             # Fallback - shouldn't happen
-            response = {"audiences": [], "custom_segment_proposals": []}
+            response = {"signals": [], "custom_segment_proposals": []}
         
-        if not response.get("audiences"):
-            console.print("[yellow]No audiences found matching your criteria[/yellow]")
+        if not response.get("signals"):
+            console.print("[yellow]No signals found matching your criteria[/yellow]")
             return
         
         # Display results in an attractive table format
-        console.print(f"\n[bold green]🎯 Found {len(response['audiences'])} audiences[/bold green]")
+        console.print(f"\n[bold green]🎯 Found {len(response['signals'])} signals[/bold green]")
         
         # Create main results table
         table = Table(show_header=True, header_style="bold cyan", box=None)
         table.add_column("#", style="dim", width=3)
-        table.add_column("Audience", style="bold", min_width=20)
+        table.add_column("Signal", style="bold", min_width=20)
         table.add_column("Provider", style="blue", width=12)
         table.add_column("Coverage", justify="right", width=8)
         table.add_column("CPM", justify="right", width=8)
         table.add_column("Status", width=12)
         
-        for i, audience in enumerate(response["audiences"], 1):
+        for i, signal in enumerate(response["signals"], 1):
             # Determine status from deployments
-            live_count = sum(1 for dep in audience["deployments"] if dep["is_live"])
-            total_count = len(audience["deployments"])
+            live_count = sum(1 for dep in signal["deployments"] if dep["is_live"])
+            total_count = len(signal["deployments"])
             
             if live_count == total_count:
                 status = "🟢 All Live"
@@ -140,9 +140,9 @@ async def discover_audiences(client: Client):
                 status = "⚪ Needs Setup"
             
             # Format pricing
-            pricing = audience["pricing"]
+            pricing = signal["pricing"]
             # Check if we have pricing data
-            if audience.get("has_pricing_data") is False:
+            if signal.get("has_pricing_data") is False:
                 cpm_str = "Unknown"
             elif "cpm" in pricing and pricing["cpm"] is not None:
                 if pricing["cpm"] == 0:
@@ -156,9 +156,9 @@ async def discover_audiences(client: Client):
             
             table.add_row(
                 str(i),
-                audience['name'][:40] + "..." if len(audience['name']) > 40 else audience['name'],
-                audience['data_provider'],
-                "Unknown" if audience.get('has_coverage_data') is False else f"{audience['coverage_percentage']:.1f}%",
+                signal['name'][:40] + "..." if len(signal['name']) > 40 else signal['name'],
+                signal['data_provider'],
+                "Unknown" if signal.get('has_coverage_data') is False else f"{signal['coverage_percentage']:.1f}%",
                 cpm_str,
                 status
             )
@@ -166,12 +166,12 @@ async def discover_audiences(client: Client):
         console.print(table)
         
         # Show detailed match reasons
-        if any(aud.get("match_reason") for aud in response["audiences"]):
+        if any(sig.get("match_reason") for sig in response["signals"]):
             console.print("\n[bold yellow]🧠 AI Match Explanations[/bold yellow]")
-            for i, audience in enumerate(response["audiences"], 1):
-                if audience.get("match_reason"):
-                    console.print(f"[dim]{i}.[/dim] [bold]{audience['name']}[/bold]")
-                    console.print(f"   [italic]{audience['match_reason']}[/italic]\n")
+            for i, signal in enumerate(response["signals"], 1):
+                if signal.get("match_reason"):
+                    console.print(f"[dim]{i}.[/dim] [bold]{signal['name']}[/bold]")
+                    console.print(f"   [italic]{signal['match_reason']}[/italic]\n")
         
         # Show custom segment proposals if available
         if response.get("custom_segment_proposals"):
@@ -200,23 +200,23 @@ async def discover_audiences(client: Client):
             for proposal in response["custom_segment_proposals"]:
                 console.print(f"  [cyan]{proposal['custom_segment_id']}[/cyan] - {proposal['proposed_name']}")
         
-        return response["audiences"]
+        return response["signals"]
     
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
         return None
 
-async def activate_audience(client: Client):
-    """Interactive audience activation."""
-    console.print("\n[bold blue]🚀 Audience Activation[/bold blue]")
+async def activate_signal(client: Client):
+    """Interactive signal activation."""
+    console.print("\n[bold blue]🚀 Signal Activation[/bold blue]")
     
-    segment_id = Prompt.ask("Audience segment ID")
+    segment_id = Prompt.ask("Signal segment ID")
     platform = Prompt.ask("Platform")
     account = Prompt.ask("Account (optional)", default="")
     principal_id = Prompt.ask("Principal ID (optional)", default="")
     
     request_data = {
-        "audience_agent_segment_id": segment_id,
+        "signals_agent_segment_id": segment_id,
         "platform": platform
     }
     
@@ -227,8 +227,8 @@ async def activate_audience(client: Client):
         request_data["principal_id"] = principal_id
     
     try:
-        console.print("\n[dim]Activating audience...[/dim]")
-        response = await client.call_tool("activate_audience", request_data)
+        console.print("\n[dim]Activating signal...[/dim]")
+        response = await client.call_tool("activate_signal", request_data)
         
         console.print(f"[bold green]✅ Activation initiated![/bold green]")
         console.print(f"Platform Segment ID: {response['decisioning_platform_segment_id']}")
@@ -244,13 +244,13 @@ async def check_status(client: Client):
     """Interactive status checking."""
     console.print("\n[bold blue]📊 Status Check[/bold blue]")
     
-    segment_id = Prompt.ask("Audience segment ID")
+    segment_id = Prompt.ask("Signal segment ID")
     platform = Prompt.ask("Platform")
     account = Prompt.ask("Account (optional)", default="")
     principal_id = Prompt.ask("Principal ID (optional)", default="")
     
     request_data = {
-        "audience_agent_segment_id": segment_id,
+        "signals_agent_segment_id": segment_id,
         "decisioning_platform": platform
     }
     
@@ -261,7 +261,7 @@ async def check_status(client: Client):
         request_data["principal_id"] = principal_id
     
     try:
-        response = await client.call_tool("check_audience_status", request_data)
+        response = await client.call_tool("check_signal_status", request_data)
         
         status_emoji = {
             "deployed": "🟢",
@@ -303,9 +303,9 @@ async def main():
                 elif command in ["help", "h"]:
                     print_help()
                 elif command in ["discover", "d"]:
-                    await discover_audiences(client)
+                    await discover_signals(client)
                 elif command in ["activate", "a"]:
-                    await activate_audience(client)
+                    await activate_signal(client)
                 elif command in ["status", "s"]:
                     await check_status(client)
                 else:
@@ -322,7 +322,7 @@ async def quick_prompt():
     """Quick prompt mode for one-off queries."""
     max_results = 5
     principal_id = None
-    audience_spec = ""
+    signal_spec = ""
     
     # Parse command line arguments
     i = 2
@@ -340,19 +340,19 @@ async def quick_prompt():
         else:
             i += 1
     
-    # Build audience_spec from remaining arguments
-    audience_parts = []
+    # Build signal_spec from remaining arguments
+    signal_parts = []
     for i in range(2, len(sys.argv)):
         if i not in args_to_skip:
-            audience_parts.append(sys.argv[i])
+            signal_parts.append(sys.argv[i])
     
-    audience_spec = " ".join(audience_parts)
+    signal_spec = " ".join(signal_parts)
     
-    if not audience_spec:
-        audience_spec = Prompt.ask("Describe the audience you're looking for")
+    if not signal_spec:
+        signal_spec = Prompt.ask("Describe the signals you're looking for")
     
     request_data = {
-        "audience_spec": audience_spec,
+        "signal_spec": signal_spec,
         "deliver_to": {
             "platforms": "all",
             "countries": ["US"]
@@ -366,11 +366,11 @@ async def quick_prompt():
     client = Client("main.py")
     async with client:
         try:
-            console.print(f"\n[bold cyan]🔍 Searching for: {audience_spec}[/bold cyan]")
+            console.print(f"\n[bold cyan]🔍 Searching for: {signal_spec}[/bold cyan]")
             principal_note = f" (Principal: {principal_id})" if principal_id else " (Public access)"
             console.print(f"[dim]Limiting to top {max_results} results{principal_note}[/dim]\n")
             
-            result = await client.call_tool("get_audiences", request_data)
+            result = await client.call_tool("get_signals", request_data)
             # Extract the actual response data - use structured_content which is already a dict
             if hasattr(result, 'structured_content') and result.structured_content:
                 response = result.structured_content
@@ -378,14 +378,14 @@ async def quick_prompt():
                 response = result.data.model_dump()
             else:
                 # Fallback - shouldn't happen
-                response = {"audiences": [], "custom_segment_proposals": []}
+                response = {"signals": [], "custom_segment_proposals": []}
             
-            if not response.get("audiences"):
-                console.print("[yellow]No audiences found matching your criteria[/yellow]")
+            if not response.get("signals"):
+                console.print("[yellow]No signals found matching your criteria[/yellow]")
                 return
             
             # Display results using the same attractive format as interactive mode
-            console.print(f"[bold green]🎯 Found {len(response['audiences'])} audiences[/bold green]")
+            console.print(f"[bold green]🎯 Found {len(response['signals'])} signals[/bold green]")
             
             # Create main results table
             table = Table(show_header=True, header_style="bold cyan", box=None)
@@ -396,10 +396,10 @@ async def quick_prompt():
             table.add_column("CPM", justify="right", width=8)
             table.add_column("Status", width=12)
             
-            for i, audience in enumerate(response["audiences"], 1):
+            for i, signal in enumerate(response["signals"], 1):
                 # Determine status from deployments
-                live_count = sum(1 for dep in audience["deployments"] if dep["is_live"])
-                total_count = len(audience["deployments"])
+                live_count = sum(1 for dep in signal["deployments"] if dep["is_live"])
+                total_count = len(signal["deployments"])
                 
                 if live_count == total_count:
                     status = "🟢 All Live"
@@ -409,9 +409,9 @@ async def quick_prompt():
                     status = "⚪ Needs Setup"
                 
                 # Format pricing
-                pricing = audience["pricing"]
+                pricing = signal["pricing"]
                 # Check if we have pricing data
-                if audience.get("has_pricing_data") is False:
+                if signal.get("has_pricing_data") is False:
                     cpm_str = "Unknown"
                 elif pricing.get("cpm"):
                     cpm_str = f"${pricing['cpm']:.2f}"
@@ -422,9 +422,9 @@ async def quick_prompt():
                 
                 table.add_row(
                     str(i),
-                    audience['name'][:35] + "..." if len(audience['name']) > 35 else audience['name'],
-                    audience['data_provider'],
-                    "Unknown" if audience.get('has_coverage_data') is False else f"{audience['coverage_percentage']:.1f}%",
+                    signal['name'][:35] + "..." if len(signal['name']) > 35 else signal['name'],
+                    signal['data_provider'],
+                    "Unknown" if signal.get('has_coverage_data') is False else f"{signal['coverage_percentage']:.1f}%",
                     cpm_str,
                     status
                 )
@@ -432,9 +432,9 @@ async def quick_prompt():
             console.print(table)
             
             # Show AI match explanations
-            if any(aud.get("match_reason") for aud in response["audiences"]):
+            if any(sig.get("match_reason") for sig in response["signals"]):
                 console.print("\n[bold yellow]🧠 AI Match Explanations[/bold yellow]")
-                for i, audience in enumerate(response["audiences"], 1):
+                for i, signal in enumerate(response["signals"], 1):
                     if audience.get("match_reason"):
                         console.print(f"[dim]{i}.[/dim] [bold]{audience['name']}[/bold]")
                         console.print(f"   [italic]{audience['match_reason']}[/italic]\n")

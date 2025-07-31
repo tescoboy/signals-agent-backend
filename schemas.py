@@ -1,4 +1,4 @@
-"""Pydantic models for the Audience Activation Protocol."""
+"""Pydantic models for the Signals Activation Protocol."""
 
 from typing import List, Optional, Dict, Any, Union, Literal
 from pydantic import BaseModel, Field
@@ -18,18 +18,18 @@ class PlatformDeployment(BaseModel):
 
 
 class PricingModel(BaseModel):
-    """Pricing information for an audience."""
+    """Pricing information for a signal."""
     cpm: Optional[float] = None
     revenue_share_percentage: Optional[float] = None
     currency: str = "USD"
 
 
-class AudienceResponse(BaseModel):
-    """Single audience in get_audiences response."""
-    audience_agent_segment_id: str
+class SignalResponse(BaseModel):
+    """Single signal in get_signals response."""
+    signals_agent_segment_id: str
     name: str
     description: str
-    audience_type: Literal["private", "marketplace"]
+    signal_type: Union[Literal["private", "marketplace", "audience", "bidding", "contextual", "geographical", "temporal", "environmental"], str]
     data_provider: str
     coverage_percentage: Optional[float] = None
     deployments: List[PlatformDeployment]
@@ -55,7 +55,7 @@ class PlatformSpecification(BaseModel):
 
 
 class DeliverySpecification(BaseModel):
-    """Specifies where audiences should be delivered/discovered."""
+    """Specifies where signals should be delivered/discovered."""
     platforms: Union[List[PlatformSpecification], Literal["all"]] = Field(
         ...,
         description='Either "all" to search all platforms, or a list of specific platform specifications',
@@ -71,19 +71,19 @@ class DeliverySpecification(BaseModel):
     )
 
 
-class AudienceFilters(BaseModel):
-    """Filters for audience discovery."""
+class SignalFilters(BaseModel):
+    """Filters for signal discovery."""
     catalog_types: Optional[List[Literal["private", "marketplace"]]] = None
     data_providers: Optional[List[str]] = None
     max_cpm: Optional[float] = None
     min_coverage_percentage: Optional[float] = None
 
 
-class GetAudiencesRequest(BaseModel):
-    """Request for discovering audiences matching your targeting needs."""
-    audience_spec: str = Field(
+class GetSignalsRequest(BaseModel):
+    """Request for discovering signals matching your targeting needs."""
+    signal_spec: str = Field(
         ...,
-        description="Natural language description of your target audience",
+        description="Natural language description of your target signals",
         examples=[
             "luxury car buyers in California",
             "parents with young children interested in educational content",
@@ -92,15 +92,15 @@ class GetAudiencesRequest(BaseModel):
     )
     deliver_to: DeliverySpecification = Field(
         ...,
-        description="Where to search for/deliver audiences"
+        description="Where to search for/deliver signals"
     )
-    filters: Optional[AudienceFilters] = Field(
+    filters: Optional[SignalFilters] = Field(
         None,
         description="Optional filters to refine results"
     )
     max_results: Optional[int] = Field(
         10,
-        description="Maximum number of audiences to return",
+        description="Maximum number of signals to return",
         ge=1,
         le=100
     )
@@ -115,41 +115,41 @@ class CustomSegmentProposal(BaseModel):
     """AI-generated custom segment proposal."""
     proposed_name: str
     description: str
-    target_audience: str
+    target_signals: str
     estimated_coverage_percentage: float
     estimated_cpm: float
     creation_rationale: str
     custom_segment_id: Optional[str] = None  # ID for activation
 
 
-class GetAudiencesResponse(BaseModel):
-    """Response from get_audiences."""
-    audiences: List[AudienceResponse]
+class GetSignalsResponse(BaseModel):
+    """Response from get_signals."""
+    signals: List[SignalResponse]
     custom_segment_proposals: Optional[List[CustomSegmentProposal]] = None
 
 
-class ActivateAudienceRequest(BaseModel):
-    """Request to activate an audience."""
-    audience_agent_segment_id: str
+class ActivateSignalRequest(BaseModel):
+    """Request to activate a signal."""
+    signals_agent_segment_id: str
     platform: str
     account: Optional[str] = None
 
 
-class ActivateAudienceResponse(BaseModel):
-    """Response from activate_audience."""
+class ActivateSignalResponse(BaseModel):
+    """Response from activate_signal."""
     decisioning_platform_segment_id: str
     estimated_activation_duration_minutes: int
 
 
-class CheckAudienceStatusRequest(BaseModel):
-    """Request to check audience status."""
-    audience_agent_segment_id: str
+class CheckSignalStatusRequest(BaseModel):
+    """Request to check signal status."""
+    signals_agent_segment_id: str
     decisioning_platform: str
     account: Optional[str] = None
 
 
-class CheckAudienceStatusResponse(BaseModel):
-    """Response from check_audience_status."""
+class CheckSignalStatusResponse(BaseModel):
+    """Response from check_signal_status."""
     status: Literal["deployed", "activating", "failed", "not_found"]
     deployed_at: Optional[datetime] = None
     error_message: Optional[str] = None
@@ -159,14 +159,14 @@ class CheckAudienceStatusResponse(BaseModel):
 
 # --- Database Models ---
 
-class AudienceSegment(BaseModel):
-    """Internal audience segment model."""
+class SignalSegment(BaseModel):
+    """Internal signal segment model."""
     id: str
     name: str
     description: str
     data_provider: str
     coverage_percentage: float
-    audience_type: Literal["private", "marketplace"]
+    signal_type: Union[Literal["private", "marketplace", "audience", "bidding", "contextual", "geographical", "temporal", "environmental"], str]
     catalog_access: Literal["public", "personalized", "private"]
     base_cpm: float
     revenue_share_percentage: Optional[float] = None
@@ -176,7 +176,7 @@ class AudienceSegment(BaseModel):
 
 class PlatformDeploymentRecord(BaseModel):
     """Database record for platform deployments."""
-    audience_agent_segment_id: str
+    signals_agent_segment_id: str
     platform: str
     account: Optional[str] = None
     decisioning_platform_segment_id: Optional[str] = None
@@ -188,7 +188,7 @@ class PlatformDeploymentRecord(BaseModel):
 
 # --- Error Models ---
 
-class AudienceError(BaseModel):
+class SignalError(BaseModel):
     """Error response model."""
     error_code: str
     message: str
@@ -196,7 +196,7 @@ class AudienceError(BaseModel):
 
 
 # Error codes as defined in the specification
-AUDIENCE_AGENT_SEGMENT_NOT_FOUND = "AUDIENCE_AGENT_SEGMENT_NOT_FOUND"
+SIGNALS_AGENT_SEGMENT_NOT_FOUND = "SIGNALS_AGENT_SEGMENT_NOT_FOUND"
 ACTIVATION_FAILED = "ACTIVATION_FAILED"
 ALREADY_ACTIVATED = "ALREADY_ACTIVATED"
 DEPLOYMENT_UNAUTHORIZED = "DEPLOYMENT_UNAUTHORIZED"

@@ -1,43 +1,49 @@
-# Audience Agent Reference Implementation
+# Signals Agent Reference Implementation
 
-This project is a Python-based reference implementation of an Audience Activation Protocol agent as defined in the [Ad Context Protocol](../adcontextprotocol/docs/audience/specification.md). It demonstrates how to build an audience platform that integrates with AI assistants through the Model Context Protocol (MCP).
+This project is a Python-based reference implementation of a Signals Activation Protocol agent. It demonstrates how to build a signals platform that integrates with AI assistants through the Model Context Protocol (MCP), supporting various signal types including:
+- **Audience signals**: Demographic and behavioral targeting
+- **Contextual signals**: Content classification and context
+- **Geographical signals**: Location-based targeting
+- **Temporal signals**: Time-based targeting
+- **Environmental signals**: Weather, events, and external conditions
+- **Bidding signals**: Custom bidding data and strategies
 
 ## 🚀 Try the Live Demo
 
 **Quick Start**: Click the green **"Code"** button above → **"Codespaces"** → **"Create codespace on main"**
 
-The demo will automatically set up with real Peer39 data and AI-powered audience discovery. See [DEMO_GUIDE.md](DEMO_GUIDE.md) for complete instructions.
+The demo will automatically set up with real data and AI-powered signal discovery. See [DEMO_GUIDE.md](DEMO_GUIDE.md) for complete instructions.
 
 ## Overview
 
-The Audience Agent provides:
+The Signals Agent provides:
 
-- **AI-Powered Discovery**: Uses Google Gemini to intelligently rank audience segments based on natural language queries
+- **AI-Powered Discovery**: Uses Google Gemini to intelligently rank signals (audiences, bidding data, contextual signals) based on natural language queries
 - **Smart Match Explanations**: Each result includes AI-generated explanations of why the segment matches your targeting goals
 - **Custom Segment Proposals**: AI suggests new custom segments that could be created for better targeting
-- **Multi-Platform Support**: Discover audiences across multiple SSPs (Index Exchange, The Trade Desk, OpenX, etc.)
+- **Multi-Platform Support**: Discover signals across multiple SSPs (Index Exchange, The Trade Desk, OpenX, etc.)
 - **Live Platform Integration**: Real-time API integration with decisioning platforms (Index Exchange supported)
 - **Intelligent Caching**: 60-second API response caching for optimal performance
-- **Real-Time Activation**: On-demand audience deployment to decisioning platforms
+- **Real-Time Activation**: On-demand signal deployment to decisioning platforms
 - **Transparent Pricing**: CPM and revenue share models with realistic market pricing
 - **Data Transparency**: Shows "Unknown" for coverage/pricing when data is not available (no guessing)
 
 ## Agent Types Supported
 
-This reference implementation supports all three audience agent types:
+This reference implementation supports all three signal agent types:
 
-### 1. Private Audience Agent
+### 1. Private Signal Agent
 - Owned by the principal with exclusive access
-- No audience costs (workflow orchestration only)
+- No signal costs (workflow orchestration only)
 - Only visible to the owning principal
 
-### 2. Marketplace Audience Agent - Public Catalog
+### 2. Marketplace Signal Agent - Public Catalog
 - Available to any orchestrator without principal registration
 - Standard marketplace pricing
 - Platform-wide segments only
 
-### 3. Marketplace Audience Agent - Personalized Catalog
-- Requires principal account with the audience agent
+### 3. Marketplace Signal Agent - Personalized Catalog
+- Requires principal account with the signal agent
 - Account-specific segments plus platform-wide segments
 - Mixed pricing: negotiated rates and standard rates
 
@@ -86,11 +92,11 @@ uv run python main.py
 
 ## Protocol Implementation
 
-This agent implements the following tools from the Audience Activation Protocol:
+This agent implements the following tools from the Signals Activation Protocol:
 
-- `get_audiences`: Discover audiences based on marketing specifications
-- `activate_audience`: Activate audiences for specific platforms/accounts  
-- `check_audience_status`: Check deployment status of audiences
+- `get_signals`: Discover signals based on marketing specifications
+- `activate_signal`: Activate signals for specific platforms/accounts  
+- `check_signal_status`: Check deployment status of signals
 
 ### Principal-Based Access Control
 
@@ -186,11 +192,11 @@ uv run python -m unittest test_main.py
 
 ## Full Lifecycle Demo
 
-The system now supports the complete audience lifecycle:
+The system now supports the complete signal lifecycle:
 
-1. **Discovery**: Search for audiences with natural language
+1. **Discovery**: Search for signals with natural language
 2. **AI Proposals**: Get custom segment suggestions with unique IDs
-3. **Activation**: Activate both existing and custom segments
+3. **Activation**: Activate both existing and custom signals
 4. **Status Tracking**: Check deployment progress
 
 Try activating a custom segment:
@@ -210,7 +216,7 @@ The interactive mode now supports principal identity for all operations:
 
 ```
 ┌─────────────────────┐    ┌──────────────────────┐    ┌─────────────────────┐
-│   AI Assistant      │    │   Audience Agent     │    │  Decisioning        │
+│   AI Assistant      │    │   Signals Agent      │    │  Decisioning        │
 │   (Orchestrator)    │───▶│   (This Project)     │───▶│  Platform (DSP)     │
 └─────────────────────┘    └──────────────────────┘    └─────────────────────┘
         │                            │                            │
