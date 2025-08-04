@@ -601,7 +601,7 @@ def activate_signal(
     
     console.print(f"[bold green]Activating signal {signals_agent_segment_id} on {platform}[/bold green]")
     
-    return ActivateAudienceResponse(
+    return ActivateSignalResponse(
         decisioning_platform_segment_id=decisioning_platform_segment_id,
         estimated_activation_duration_minutes=activation_duration
     )
@@ -704,6 +704,23 @@ def check_signal_status(
         )
 
 
+# Backward compatibility aliases for old tool names
+@mcp.tool
+def get_audiences(*args, **kwargs):
+    """Backward compatibility alias for get_signals."""
+    return get_signals(*args, **kwargs)
+
+
+@mcp.tool
+def activate_audience(*args, **kwargs):
+    """Backward compatibility alias for activate_signal."""
+    return activate_signal(*args, **kwargs)
+
+
+@mcp.tool
+def check_audience_status(*args, **kwargs):
+    """Backward compatibility alias for check_signal_status."""
+    return check_signal_status(*args, **kwargs)
 
 
 if __name__ == "__main__":
