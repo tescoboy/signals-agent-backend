@@ -121,7 +121,7 @@ def generate_custom_segment_proposals(signal_spec: str, existing_segments: List[
     For each proposal, consider:
     - What specific contextual signals could be used
     - What makes this segment unique from existing ones
-    - Why an advertiser would pay a premium for this targeting
+    - How this targeting delivers value through precision and relevance
     
     Return your response as a JSON array:
     [
@@ -131,11 +131,11 @@ def generate_custom_segment_proposals(signal_spec: str, existing_segments: List[
         "target_signals": "What signals this captures (audiences, contexts, behaviors)",
         "estimated_coverage_percentage": 2.5,
         "estimated_cpm": 6.50,
-        "creation_rationale": "Why this segment would be valuable and what signals would be used"
+        "creation_rationale": "How this segment enables precise targeting and what signals would be used"
       }}
     ]
     
-    Focus on high-value, specific segments that would command premium pricing.
+    Focus on specific, impactful segments that deliver measurable results.
     """
     
     try:
