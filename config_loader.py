@@ -44,14 +44,35 @@ def load_config() -> Dict[str, Any]:
                     config['platforms']['index-exchange']['principal_accounts'] = mappings
                 except json.JSONDecodeError:
                     print(f"Warning: Invalid IX_ACCOUNT_MAPPING JSON: {ix_mappings}")
+            
+            # Default account for Index Exchange
+            if ix_default_account := os.environ.get('IX_DEFAULT_ACCOUNT'):
+                if 'principal_accounts' not in config['platforms']['index-exchange']:
+                    config['platforms']['index-exchange']['principal_accounts'] = {}
+                # Set default account for common principals
+                config['platforms']['index-exchange']['principal_accounts']['default'] = ix_default_account
+                config['platforms']['index-exchange']['principal_accounts']['acme_corp'] = ix_default_account
+                config['platforms']['index-exchange']['principal_accounts']['luxury_brands_inc'] = ix_default_account
+                config['platforms']['index-exchange']['principal_accounts']['auto_manufacturer'] = ix_default_account
         
         # LiveRamp overrides
         if 'liveramp' in config['platforms']:
             if lr_client_id := os.environ.get('LIVERAMP_CLIENT_ID'):
                 config['platforms']['liveramp']['client_id'] = lr_client_id
+                # Enable LiveRamp if credentials are provided
+                config['platforms']['liveramp']['enabled'] = True
             
-            if lr_client_secret := os.environ.get('LIVERAMP_CLIENT_SECRET'):
-                config['platforms']['liveramp']['client_secret'] = lr_client_secret
+            if lr_secret_key := os.environ.get('LIVERAMP_SECRET_KEY'):
+                config['platforms']['liveramp']['client_secret'] = lr_secret_key
+            
+            if lr_uid := os.environ.get('LIVERAMP_UID'):
+                config['platforms']['liveramp']['uid'] = lr_uid
+            
+            if lr_owner_org := os.environ.get('LIVERAMP_OWNER_ORG'):
+                config['platforms']['liveramp']['owner_org'] = lr_owner_org
+            
+            if lr_token_uri := os.environ.get('LIVERAMP_TOKEN_URI'):
+                config['platforms']['liveramp']['token_uri'] = lr_token_uri
             
             # Account mappings (JSON string)
             if lr_mappings := os.environ.get('LIVERAMP_ACCOUNT_MAPPING'):
@@ -60,6 +81,15 @@ def load_config() -> Dict[str, Any]:
                     config['platforms']['liveramp']['principal_accounts'] = mappings
                 except json.JSONDecodeError:
                     print(f"Warning: Invalid LIVERAMP_ACCOUNT_MAPPING JSON: {lr_mappings}")
+            
+            # Default account for LiveRamp
+            if lr_account_id := os.environ.get('LIVERAMP_ACCOUNT_ID'):
+                if 'principal_accounts' not in config['platforms']['liveramp']:
+                    config['platforms']['liveramp']['principal_accounts'] = {}
+                # Set default account for common principals
+                config['platforms']['liveramp']['principal_accounts']['default'] = lr_account_id
+                config['platforms']['liveramp']['principal_accounts']['acme_corp'] = lr_account_id
+                config['platforms']['liveramp']['principal_accounts']['luxury_brands_inc'] = lr_account_id
     
     # Database path override (useful for Docker volumes)
     if db_path := os.environ.get('DATABASE_PATH'):
