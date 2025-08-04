@@ -601,7 +601,7 @@ def activate_signal(
     
     console.print(f"[bold green]Activating signal {signals_agent_segment_id} on {platform}[/bold green]")
     
-    return ActivateAudienceResponse(
+    return ActivateSignalResponse(
         decisioning_platform_segment_id=decisioning_platform_segment_id,
         estimated_activation_duration_minutes=activation_duration
     )
@@ -702,8 +702,6 @@ def check_signal_status(
             status="deployed",
             deployed_at=datetime.now()
         )
-
-
 
 
 if __name__ == "__main__":

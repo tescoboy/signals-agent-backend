@@ -9,9 +9,9 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy requirements and install Python dependencies
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./
 RUN pip install uv
-RUN uv sync --frozen
+RUN uv pip install --system fastmcp pydantic rich google-generativeai requests
 
 # Copy application code
 COPY . .
@@ -20,10 +20,10 @@ COPY . .
 RUN cp config.json.sample config.json
 
 # Initialize database
-RUN uv run python database.py
+RUN python database.py
 
 # Expose port for web demo
 EXPOSE 8000
 
 # Default command - run FastMCP with streamable HTTP transport for web access
-CMD ["uv", "run", "fastmcp", "run", "--transport", "http", "--host", "0.0.0.0", "--port", "8000", "main.py"]
+CMD ["fastmcp", "run", "--transport", "http", "--host", "0.0.0.0", "--port", "8000", "main.py"]
