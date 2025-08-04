@@ -706,21 +706,37 @@ def check_signal_status(
 
 # Backward compatibility aliases for old tool names
 @mcp.tool
-def get_audiences(*args, **kwargs):
+def get_audiences(
+    signal_spec: str,
+    deliver_to: DeliverySpecification,
+    filters: Optional[SignalFilters] = None,
+    max_results: Optional[int] = 10,
+    principal_id: Optional[str] = None
+) -> GetSignalsResponse:
     """Backward compatibility alias for get_signals."""
-    return get_signals(*args, **kwargs)
+    return get_signals(signal_spec, deliver_to, filters, max_results, principal_id)
 
 
 @mcp.tool
-def activate_audience(*args, **kwargs):
+def activate_audience(
+    signals_agent_segment_id: str,
+    platform: str,
+    account: Optional[str] = None,
+    principal_id: Optional[str] = None
+) -> ActivateSignalResponse:
     """Backward compatibility alias for activate_signal."""
-    return activate_signal(*args, **kwargs)
+    return activate_signal(signals_agent_segment_id, platform, account, principal_id)
 
 
 @mcp.tool
-def check_audience_status(*args, **kwargs):
+def check_audience_status(
+    signals_agent_segment_id: str,
+    decisioning_platform: str,
+    account: Optional[str] = None,
+    principal_id: Optional[str] = None
+) -> CheckSignalStatusResponse:
     """Backward compatibility alias for check_signal_status."""
-    return check_signal_status(*args, **kwargs)
+    return check_signal_status(signals_agent_segment_id, decisioning_platform, account, principal_id)
 
 
 if __name__ == "__main__":
