@@ -85,6 +85,32 @@ def create_tables(cursor: sqlite3.Cursor):
         )
     """)
     
+    # Discovery contexts table for tracking discovery sessions
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS discovery_contexts (
+            context_id TEXT PRIMARY KEY,
+            query TEXT NOT NULL,
+            principal_id TEXT,
+            signal_ids TEXT NOT NULL,
+            search_parameters TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
+        )
+    """)
+    
+    # Activation contexts table for linking activations to discoveries
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS activation_contexts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            context_id TEXT NOT NULL,
+            signal_id TEXT NOT NULL,
+            platform TEXT NOT NULL,
+            account TEXT,
+            activated_at TEXT NOT NULL,
+            FOREIGN KEY (context_id) REFERENCES discovery_contexts (context_id)
+        )
+    """)
+    
 
 
 def insert_sample_data(cursor: sqlite3.Cursor):

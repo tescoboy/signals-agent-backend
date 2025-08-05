@@ -124,8 +124,20 @@ class CustomSegmentProposal(BaseModel):
 
 class GetSignalsResponse(BaseModel):
     """Response from get_signals."""
+    message: str = Field(
+        ...,
+        description="Human-readable summary of the response"
+    )
+    context_id: str = Field(
+        ...,
+        description="Unique identifier for this discovery session (format: ctx_<timestamp>_<random>)"
+    )
     signals: List[SignalResponse]
     custom_segment_proposals: Optional[List[CustomSegmentProposal]] = None
+    clarification_needed: Optional[str] = Field(
+        None,
+        description="Indicates if additional clarification would improve results"
+    )
 
 
 class ActivateSignalRequest(BaseModel):
@@ -133,15 +145,27 @@ class ActivateSignalRequest(BaseModel):
     signals_agent_segment_id: str
     platform: str
     account: Optional[str] = None
+    context_id: Optional[str] = Field(
+        None,
+        description="Discovery context ID to link this activation to"
+    )
 
 
 class ActivateSignalResponse(BaseModel):
     """Response from activate_signal."""
+    message: str = Field(
+        ...,
+        description="Human-readable summary of the activation status"
+    )
     decisioning_platform_segment_id: str
     estimated_activation_duration_minutes: int
     status: Literal["deployed", "activating", "failed"] = "activating"
     deployed_at: Optional[datetime] = None
     error_message: Optional[str] = None
+    context_id: Optional[str] = Field(
+        None,
+        description="Discovery context ID this activation is linked to"
+    )
 
 
 
