@@ -85,30 +85,29 @@ def create_tables(cursor: sqlite3.Cursor):
         )
     """)
     
-    # Discovery contexts table for tracking discovery sessions
+    # Unified contexts table for all context types
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS discovery_contexts (
+        CREATE TABLE IF NOT EXISTS contexts (
             context_id TEXT PRIMARY KEY,
-            query TEXT NOT NULL,
+            context_type TEXT NOT NULL CHECK (context_type IN ('discovery', 'activation', 'optimization', 'reporting')),
+            parent_context_id TEXT,
             principal_id TEXT,
-            signal_ids TEXT NOT NULL,
-            search_parameters TEXT NOT NULL,
+            metadata TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            expires_at TEXT NOT NULL
+            expires_at TEXT NOT NULL,
+            FOREIGN KEY (parent_context_id) REFERENCES contexts (context_id)
         )
     """)
     
-    # Activation contexts table for linking activations to discoveries
+    # Create index for efficient lookups
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS activation_contexts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            context_id TEXT NOT NULL,
-            signal_id TEXT NOT NULL,
-            platform TEXT NOT NULL,
-            account TEXT,
-            activated_at TEXT NOT NULL,
-            FOREIGN KEY (context_id) REFERENCES discovery_contexts (context_id)
-        )
+        CREATE INDEX IF NOT EXISTS idx_contexts_type_principal 
+        ON contexts (context_type, principal_id)
+    """)
+    
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contexts_parent 
+        ON contexts (parent_context_id)
     """)
     
 

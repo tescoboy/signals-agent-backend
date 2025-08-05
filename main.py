@@ -40,23 +40,28 @@ def generate_context_id() -> str:
 
 def store_discovery_context(context_id: str, query: str, principal_id: Optional[str], 
                           signal_ids: List[str], search_parameters: Dict[str, Any]) -> None:
-    """Store discovery context in database with 7-day expiration."""
+    """Store discovery context in unified contexts table with 7-day expiration."""
     conn = get_db_connection()
     cursor = conn.cursor()
     
     created_at = datetime.now()
     expires_at = created_at + timedelta(days=7)
     
+    # Store metadata as JSON
+    metadata = {
+        "query": query,
+        "signal_ids": signal_ids,
+        "search_parameters": search_parameters
+    }
+    
     cursor.execute("""
-        INSERT INTO discovery_contexts 
-        (context_id, query, principal_id, signal_ids, search_parameters, created_at, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO contexts 
+        (context_id, context_type, parent_context_id, principal_id, metadata, created_at, expires_at)
+        VALUES (?, 'discovery', NULL, ?, ?, ?, ?)
     """, (
         context_id,
-        query,
         principal_id,
-        json.dumps(signal_ids),
-        json.dumps(search_parameters),
+        json.dumps(metadata),
         created_at.isoformat(),
         expires_at.isoformat()
     ))
@@ -65,29 +70,51 @@ def store_discovery_context(context_id: str, query: str, principal_id: Optional[
     conn.close()
 
 
-def store_activation_context(context_id: Optional[str], signal_id: str, 
-                           platform: str, account: Optional[str]) -> None:
-    """Store activation context linking to discovery."""
-    if not context_id:
-        return
-        
+def store_activation_context(parent_context_id: Optional[str], signal_id: str, 
+                           platform: str, account: Optional[str]) -> str:
+    """Store activation context in unified contexts table, optionally linking to discovery."""
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # Generate new context ID for this activation
+    context_id = generate_context_id()
+    
+    created_at = datetime.now()
+    expires_at = created_at + timedelta(days=30)  # Activations have longer expiration
+    
+    # Store metadata as JSON
+    metadata = {
+        "signal_id": signal_id,
+        "platform": platform,
+        "account": account,
+        "activated_at": created_at.isoformat()
+    }
+    
+    # Get principal from parent context if available
+    principal_id = None
+    if parent_context_id:
+        cursor.execute("SELECT principal_id FROM contexts WHERE context_id = ?", (parent_context_id,))
+        result = cursor.fetchone()
+        if result:
+            principal_id = result['principal_id']
+    
     cursor.execute("""
-        INSERT INTO activation_contexts 
-        (context_id, signal_id, platform, account, activated_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO contexts 
+        (context_id, context_type, parent_context_id, principal_id, metadata, created_at, expires_at)
+        VALUES (?, 'activation', ?, ?, ?, ?, ?)
     """, (
         context_id,
-        signal_id,
-        platform,
-        account,
-        datetime.now().isoformat()
+        parent_context_id,
+        principal_id,
+        json.dumps(metadata),
+        created_at.isoformat(),
+        expires_at.isoformat()
     ))
     
     conn.commit()
     conn.close()
+    
+    return context_id
 
 
 def generate_activation_message(segment_name: str, platform: str, status: str, 
@@ -657,14 +684,14 @@ def activate_signal(
             existing = segment_activations[activation_key]
             if existing.get('status') == 'deployed':
                 # Already deployed - return current status
-                store_activation_context(context_id, signals_agent_segment_id, platform, account)
+                activation_context_id = store_activation_context(context_id, signals_agent_segment_id, platform, account)
                 return ActivateSignalResponse(
                     message=generate_activation_message(segment['name'], platform, "deployed"),
                     decisioning_platform_segment_id=existing['decisioning_platform_segment_id'],
                     estimated_activation_duration_minutes=0,
                     status="deployed",
                     deployed_at=datetime.fromisoformat(existing.get('deployed_at', existing['activation_started_at'])),
-                    context_id=context_id
+                    context_id=activation_context_id
                 )
             elif existing.get('status') == 'activating':
                 # Check if enough time has passed to complete the activation
@@ -677,14 +704,14 @@ def activate_signal(
                     
                     console.print(f"[bold green]Custom segment '{signals_agent_segment_id}' is now live on {platform}[/bold green]")
                     
-                    store_activation_context(context_id, signals_agent_segment_id, platform, account)
+                    activation_context_id = store_activation_context(context_id, signals_agent_segment_id, platform, account)
                     return ActivateSignalResponse(
                         message=generate_activation_message(segment['name'], platform, "deployed"),
                         decisioning_platform_segment_id=existing['decisioning_platform_segment_id'],
                         estimated_activation_duration_minutes=0,
                         status="deployed",
                         deployed_at=datetime.now(),
-                        context_id=context_id
+                        context_id=activation_context_id
                     )
                 else:
                     # Still activating
@@ -694,7 +721,7 @@ def activate_signal(
                         decisioning_platform_segment_id=existing['decisioning_platform_segment_id'],
                         estimated_activation_duration_minutes=remaining_minutes,
                         status="activating",
-                        context_id=context_id
+                        context_id=existing.get('activation_context_id', context_id)
                     )
         
         # Generate platform segment ID
@@ -718,13 +745,13 @@ def activate_signal(
         console.print(f"[bold cyan]Creating and activating custom segment '{segment['name']}' on {platform}[/bold cyan]")
         console.print(f"[dim]This involves building the segment from scratch, estimated duration: {activation_duration} minutes[/dim]")
         
-        store_activation_context(context_id, signals_agent_segment_id, platform, account)
+        activation_context_id = store_activation_context(context_id, signals_agent_segment_id, platform, account)
         return ActivateSignalResponse(
             message=generate_activation_message(segment['name'], platform, "activating", activation_duration),
             decisioning_platform_segment_id=decisioning_platform_segment_id,
             estimated_activation_duration_minutes=activation_duration,
             status="activating",
-            context_id=context_id
+            context_id=activation_context_id
         )
     
     # Handle regular database segments
@@ -764,14 +791,14 @@ def activate_signal(
         if existing['is_live']:
             # Already deployed - return current status instead of error
             conn.close()
-            store_activation_context(context_id, signals_agent_segment_id, platform, account)
+            activation_context_id = store_activation_context(context_id, signals_agent_segment_id, platform, account)
             return ActivateSignalResponse(
                 message=generate_activation_message(segment['name'], platform, "deployed"),
                 decisioning_platform_segment_id=existing['decisioning_platform_segment_id'],
                 estimated_activation_duration_minutes=0,
                 status="deployed",
                 deployed_at=datetime.fromisoformat(existing['deployed_at']) if existing['deployed_at'] else None,
-                context_id=context_id
+                context_id=activation_context_id
             )
         else:
             # Still activating - for demo purposes, immediately mark as deployed
@@ -783,14 +810,14 @@ def activate_signal(
             conn.commit()
             conn.close()
             
-            store_activation_context(context_id, signals_agent_segment_id, platform, account)
+            activation_context_id = store_activation_context(context_id, signals_agent_segment_id, platform, account)
             return ActivateSignalResponse(
                 message=generate_activation_message(segment['name'], platform, "deployed"),
                 decisioning_platform_segment_id=existing['decisioning_platform_segment_id'],
                 estimated_activation_duration_minutes=0,
                 status="deployed",
                 deployed_at=datetime.now(),
-                context_id=context_id
+                context_id=activation_context_id
             )
     
     # Generate platform segment ID
@@ -825,13 +852,13 @@ def activate_signal(
     
     console.print(f"[bold green]Activating signal {signals_agent_segment_id} on {platform}[/bold green]")
     
-    store_activation_context(context_id, signals_agent_segment_id, platform, account)
+    activation_context_id = store_activation_context(context_id, signals_agent_segment_id, platform, account)
     return ActivateSignalResponse(
         message=generate_activation_message(segment['name'], platform, "activating", activation_duration),
         decisioning_platform_segment_id=decisioning_platform_segment_id,
         estimated_activation_duration_minutes=activation_duration,
         status="activating",
-        context_id=context_id
+        context_id=activation_context_id
     )
 
 
