@@ -11,18 +11,23 @@ from typing import Optional
 # Add current directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from database import init_db
-from config_loader import load_config
-from adapters.manager import AdapterManager
-from protocol_abstraction import CoreBusinessLogic
-from a2a_server import A2AServer
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+from database import init_db
+from config_loader import load_config
+from adapters.manager import AdapterManager
+from protocol_abstraction import CoreBusinessLogic
+try:
+    from a2a_fastapi_server import create_a2a_server
+    A2A_AVAILABLE = True
+except ImportError as e:
+    A2A_AVAILABLE = False
+    logger.warning(f"A2A dependencies not available: {e}")
 
 
 def setup_core_logic():
@@ -45,9 +50,10 @@ def setup_core_logic():
             self.adapter_manager = adapter_manager
         
         async def discover_signals(self, request):
-            # Import and use existing logic
-            from main import get_signals
-            return get_signals(
+            # Import the actual functions from FastMCP FunctionTool
+            import main
+            # FastMCP wraps functions in FunctionTool, access the actual function via .fn
+            return main.get_signals.fn(
                 signal_spec=request.signal_spec,
                 deliver_to=request.deliver_to,
                 filters=request.filters,
@@ -56,9 +62,10 @@ def setup_core_logic():
             )
         
         async def activate_signal(self, request):
-            # Import and use existing logic
-            from main import activate_signal
-            return activate_signal(
+            # Import the actual functions from FastMCP FunctionTool
+            import main
+            # FastMCP wraps functions in FunctionTool, access the actual function via .fn
+            return main.activate_signal.fn(
                 signals_agent_segment_id=request.signals_agent_segment_id,
                 platform=request.platform,
                 account=request.account,
@@ -79,11 +86,24 @@ def run_mcp_server():
 
 
 def run_a2a_server(core_logic, host: str = "localhost", port: int = 8080):
-    """Run the A2A server."""
+    """Run the A2A server using FastAPI."""
+    if not A2A_AVAILABLE:
+        logger.error("Cannot start A2A server: dependencies not available")
+        return None
+    
     logger.info(f"Starting A2A server on {host}:{port}...")
     
-    server = A2AServer(core_logic, host, port)
-    server.start()
+    server = create_a2a_server(core_logic, host, port)
+    
+    # Run server in background thread
+    import threading
+    server_thread = threading.Thread(
+        target=server.run, 
+        args=(host, port),
+        daemon=True
+    )
+    server_thread.start()
+    
     return server
 
 
@@ -158,7 +178,7 @@ def main():
     finally:
         # Clean up A2A server
         if a2a_server:
-            a2a_server.stop()
+            logger.info("A2A server stopped")
 
 
 if __name__ == "__main__":
