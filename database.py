@@ -85,7 +85,7 @@ def create_tables(cursor: sqlite3.Cursor):
         )
     """)
     
-    # Unified contexts table for all context types
+    # Unified contexts table for all context types (A2A-ready)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS contexts (
             context_id TEXT PRIMARY KEY,
@@ -93,7 +93,9 @@ def create_tables(cursor: sqlite3.Cursor):
             parent_context_id TEXT,
             principal_id TEXT,
             metadata TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'in_progress', 'completed', 'failed', 'expired')),
             created_at TEXT NOT NULL,
+            completed_at TEXT,
             expires_at TEXT NOT NULL,
             FOREIGN KEY (parent_context_id) REFERENCES contexts (context_id)
         )
