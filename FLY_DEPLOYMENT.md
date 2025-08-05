@@ -107,37 +107,62 @@ fly logs
 fly ssh console
 ```
 
-## Web Interface Setup
+## Unified Server Setup
 
-The MCP server is configured to use FastMCP's streamable HTTP transport, which provides a modern HTTP-based interface for the Model Context Protocol. This allows direct web access without needing additional servers.
+The server now supports both MCP and A2A protocols on a single HTTP endpoint, providing maximum flexibility for different client types.
 
 ### How it Works
 
-The Dockerfile runs FastMCP with HTTP transport:
+The Dockerfile runs a unified FastAPI server:
 ```dockerfile
-CMD ["uv", "run", "fastmcp", "--transport", "http", "--port", "8000", "--host", "0.0.0.0", "main.py"]
+CMD ["uvicorn", "unified_server:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 This provides:
-- **Streamable HTTP**: Modern HTTP/2 streaming for efficient communication
-- **Direct Web Access**: The MCP server is accessible via HTTP on port 8000
-- **No Additional Servers**: FastMCP handles the HTTP layer directly
+- **Dual Protocol Support**: Both MCP (JSON-RPC) and A2A (REST) on one server
+- **Direct Web Access**: Accessible via HTTP on port 8000
+- **Protocol Endpoints**:
+  - `/mcp` - MCP JSON-RPC endpoint
+  - `/a2a/task` - A2A task execution endpoint
+  - `/agent-card` - A2A agent capabilities
+  - `/health` - Health check for both protocols
 
 ### Accessing the Server
 
-Once deployed, your MCP server will be available at:
+Once deployed, your unified server will be available at:
 ```
 https://audience-agent.fly.dev
 ```
 
 Clients can connect using:
-- MCP-compatible clients that support HTTP transport
-- Direct HTTP API calls to the MCP endpoints
-- Streamable HTTP for real-time updates
+- **MCP Clients**: Send JSON-RPC requests to `https://audience-agent.fly.dev/mcp`
+- **A2A Clients**: Send task requests to `https://audience-agent.fly.dev/a2a/task`
+- **Health Monitoring**: Check `https://audience-agent.fly.dev/health`
+
+### Testing the Deployment
+
+Test MCP protocol:
+```bash
+curl -X POST https://audience-agent.fly.dev/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}'
+```
+
+Test A2A protocol:
+```bash
+curl https://audience-agent.fly.dev/agent-card
+```
 
 ### Health Checks
 
-Fly.io will automatically monitor the HTTP endpoint. The FastMCP HTTP transport provides built-in health checks.
+Fly.io will automatically monitor the `/health` endpoint which returns:
+```json
+{
+  "status": "healthy",
+  "protocols": ["mcp", "a2a"],
+  "timestamp": "2025-08-05T12:00:00Z"
+}
+```
 
 ## Managing Multiple Environments
 

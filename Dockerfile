@@ -11,7 +11,7 @@ WORKDIR /app
 # Copy requirements and install Python dependencies
 COPY pyproject.toml ./
 RUN pip install uv
-RUN uv pip install --system fastmcp pydantic rich google-generativeai requests
+RUN uv pip install --system fastmcp pydantic rich google-generativeai requests fastapi uvicorn
 
 # Copy application code
 COPY . .
@@ -19,11 +19,16 @@ COPY . .
 # Create config from sample (users will need to set their API key)
 RUN cp config.json.sample config.json
 
+# Set default environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
+
 # Initialize database
 RUN python database.py
 
-# Expose port for web demo
+# Expose port for unified server
 EXPOSE 8000
 
-# Default command - run FastMCP with streamable HTTP transport for web access
-CMD ["fastmcp", "run", "--transport", "http", "--host", "0.0.0.0", "--port", "8000", "main.py"]
+# Run the unified server supporting both MCP and A2A protocols
+# Use uvicorn directly for better production performance
+CMD ["uvicorn", "unified_server:app", "--host", "0.0.0.0", "--port", "8000"]
