@@ -7,8 +7,11 @@ from typing import List, Dict, Any
 
 def init_db():
     """Initialize the database with tables and sample data."""
-    conn = sqlite3.connect('signals_agent.db')
+    conn = sqlite3.connect('signals_agent.db', timeout=30.0)
     cursor = conn.cursor()
+    
+    # Enable WAL mode for better concurrent access
+    cursor.execute("PRAGMA journal_mode=WAL")
     
     # Create tables
     create_tables(cursor)

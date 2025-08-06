@@ -26,8 +26,10 @@ segment_activations: Dict[str, Dict] = {}
 
 def get_db_connection():
     """Get database connection with row factory."""
-    conn = sqlite3.connect('signals_agent.db')
+    conn = sqlite3.connect('signals_agent.db', timeout=30.0)
     conn.row_factory = sqlite3.Row
+    # Enable WAL mode for better concurrent access
+    conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
 
@@ -301,7 +303,7 @@ def generate_custom_segment_proposals(signal_spec: str, existing_segments: List[
 
 # --- Application Setup ---
 config = load_config()
-init_db()
+# init_db() moved to if __name__ == "__main__" section
 
 # Initialize Gemini
 genai.configure(api_key=config.get("gemini_api_key", "your-api-key-here"))
@@ -864,4 +866,5 @@ def activate_signal(
 
 
 if __name__ == "__main__":
+    init_db()
     mcp.run()

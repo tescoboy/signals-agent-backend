@@ -191,7 +191,23 @@ async def handle_a2a_task(request: Dict[str, Any]):
 
 # ===== MCP Protocol Endpoints =====
 
+@app.get("/mcp")
+@app.get("/mcp/")
+async def mcp_discovery():
+    """Return MCP server information for discovery."""
+    return {
+        "mcp_version": "1.0",
+        "server_name": "audience-agent",
+        "server_version": "1.0.0",
+        "capabilities": {
+            "tools": True,
+            "resources": False,
+            "prompts": False
+        }
+    }
+
 @app.post("/mcp")
+@app.post("/mcp/")
 async def handle_mcp_request(request: Request):
     """Handle MCP JSON-RPC requests over HTTP."""
     try:
@@ -203,7 +219,20 @@ async def handle_mcp_request(request: Request):
         request_id = json_rpc.get("id")
         
         # Route to appropriate handler
-        if method == "tools/list":
+        if method == "initialize":
+            # Handle MCP initialization
+            result = {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {}
+                },
+                "serverInfo": {
+                    "name": "audience-agent",
+                    "version": "1.0.0"
+                }
+            }
+            
+        elif method == "tools/list":
             # Return available tools
             result = {
                 "tools": [

@@ -3,6 +3,8 @@
 
 import json
 import requests
+from typing import Optional
+from datetime import datetime
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -65,7 +67,7 @@ def test_discovery(base_url: str = "http://localhost:8080", query: str = "sports
     }
     
     try:
-        response = requests.post(f"{base_url}/a2a", json=task)
+        response = requests.post(f"{base_url}/a2a/task", json=task)
         response.raise_for_status()
         
         result = response.json()
@@ -82,6 +84,11 @@ def test_discovery(base_url: str = "http://localhost:8080", query: str = "sports
         # Extract content from parts
         if 'parts' in result and result['parts']:
             content = result['parts'][0].get('content', {})
+            
+            # Handle string content (error messages)
+            if isinstance(content, str):
+                console.print(f"\n[red]Error: {content}[/red]")
+                return None
             
             # Display message
             if 'message' in content:
@@ -146,7 +153,7 @@ def test_activation(base_url: str = "http://localhost:8080",
         console.print(f"Context: {context_id}")
     
     try:
-        response = requests.post(f"{base_url}/a2a", json=task)
+        response = requests.post(f"{base_url}/a2a/task", json=task)
         response.raise_for_status()
         
         result = response.json()
@@ -164,6 +171,11 @@ def test_activation(base_url: str = "http://localhost:8080",
         # Extract content from parts
         if 'parts' in result and result['parts']:
             content = result['parts'][0].get('content', {})
+            
+            # Handle string content (error messages)
+            if isinstance(content, str):
+                console.print(f"\n[red]Error: {content}[/red]")
+                return None
             
             # Display message
             if 'message' in content:
