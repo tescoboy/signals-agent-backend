@@ -1,16 +1,11 @@
-INFO:     Started server process [29781]
+INFO:     Started server process [66476]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 Loaded adapter for platform: index-exchange
 Database initialized with sample data
-INFO:     127.0.0.1:58739 - "GET /agent-card HTTP/1.1" 200 OK
-AI ranking failed (400 API key not valid. Please pass a valid API key. ), using 
-basic text matching
-Custom segment proposal generation failed (400 API key not valid. Please pass a 
-valid API key. )
-INFO:     127.0.0.1:58741 - "POST /a2a/task HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58746 - "POST /a2a/task HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58780 - "GET /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58796 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58808 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63463 - "OPTIONS /agent-card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63474 - "HEAD /agent-card HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:63489 - "GET /agent-card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63503 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63523 - "POST /a2a/task HTTP/1.1" 200 OK
