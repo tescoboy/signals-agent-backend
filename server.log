@@ -11,3 +11,6 @@ Custom segment proposal generation failed (400 API key not valid. Please pass a
 valid API key. )
 INFO:     127.0.0.1:58741 - "POST /a2a/task HTTP/1.1" 200 OK
 INFO:     127.0.0.1:58746 - "POST /a2a/task HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58780 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58796 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58808 - "POST /mcp HTTP/1.1" 200 OK
