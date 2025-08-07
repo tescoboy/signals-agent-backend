@@ -113,11 +113,39 @@ async def handle_a2a_root_task(request: Dict[str, Any]):
         task_result = await handle_a2a_task(task_request)
         
         # For message/send requests, return Message format instead of Task format
+        # Extract the response data from task result
+        task_output = task_result.get("output", {})
+        task_parts = task_output.get("parts", [])
+        
+        # Build proper A2A Message with correct parts format
+        message_parts = []
+        
+        if task_parts:
+            # Get the response data
+            response_content = task_parts[0].get("content", {})
+            
+            # Add a TextPart with the summary message
+            if "message" in response_content:
+                message_parts.append({
+                    "kind": "text",
+                    "text": response_content["message"]
+                })
+            
+            # Add a DataPart with structured data if available
+            if "signals" in response_content or "context_id" in response_content:
+                message_parts.append({
+                    "kind": "data", 
+                    "data": {
+                        "contentType": "application/json",
+                        "content": response_content
+                    }
+                })
+        
         message_response = {
             "kind": "message",
-            "messageId": f"msg_{datetime.now().timestamp()}",
-            "parts": task_result.get("output", {}).get("parts", []),
-            "role": "assistant"
+            "message_id": f"msg_{datetime.now().timestamp()}",  # Fixed: use message_id not messageId
+            "parts": message_parts,
+            "role": "agent"  # Fixed: use 'agent' instead of 'assistant'
         }
         
         # Wrap response in JSON-RPC format
@@ -152,10 +180,11 @@ async def get_agent_card(request: Request):
         "url": base_url,  # Dynamic URL based on request
         "defaultInputModes": ["text"],
         "defaultOutputModes": ["text"],
-        "capabilities": {  # Required by spec
+        "capabilities": {  # Required by spec - using fields from AgentCapabilities
             "streaming": False,
-            "batchProcessing": False,
-            "concurrentTasks": True
+            "pushNotifications": False,
+            "stateTransitionHistory": False,
+            "extensions": []
         },
         "skills": [
             {
@@ -275,27 +304,47 @@ async def handle_a2a_task(request: Dict[str, Any]):
                 principal_id=internal_request.principal_id
             )
             
-            # Build A2A-compliant response
-            task_response = {
-                "id": task_id,  # Changed from taskId to id per spec
-                "kind": "task",  # Added required field
-                "status": "Completed",  # Capital C per spec enum
-                "contextId": context_id or response.context_id,
-                "completedAt": datetime.now().isoformat(),
-                "output": {  # Changed from parts to output per spec
-                    "parts": [{
-                        "contentType": "application/json",
-                        "content": response.model_dump()
-                    }]
-                }
+            # Build A2A SDK-compliant response
+            # The SDK expects a Task with TaskStatus containing state field
+            from a2a.types import TaskState, TaskStatus, Message, TextPart, DataPart, Role
+            
+            # Create parts for the message
+            parts = []
+            if response.message:
+                parts.append({
+                    "kind": "text",
+                    "text": response.message
+                })
+            
+            # Add data part with structured response
+            parts.append({
+                "kind": "data",
+                "data": response.model_dump()
+            })
+            
+            # Create the status message
+            status_message = {
+                "kind": "message",
+                "messageId": f"msg_{datetime.now().timestamp()}",
+                "parts": parts,
+                "role": "agent"
             }
             
-            # Add optional metadata
-            if response.signals:
-                task_response["metadata"] = {
+            # Build the task response with proper status structure
+            task_response = {
+                "id": task_id,
+                "kind": "task",
+                "contextId": context_id or response.context_id,
+                "status": {
+                    "state": "completed",  # Using TaskState enum value
+                    "timestamp": datetime.now().isoformat(),
+                    "message": status_message
+                },
+                "metadata": {
                     "signal_count": len(response.signals),
                     "context_id": response.context_id
                 }
+            }
             
             return task_response
             
@@ -316,28 +365,46 @@ async def handle_a2a_task(request: Dict[str, Any]):
                 context_id=internal_request.context_id
             )
             
-            # Build A2A-compliant response
-            task_status = "Completed" if response.status == "deployed" else "InProgress"
+            # Build A2A SDK-compliant response
+            # Determine state based on our status
+            task_state = "completed" if response.status == "deployed" else "working"
+            
+            # Create parts for the message
+            parts = []
+            if response.message:
+                parts.append({
+                    "kind": "text",
+                    "text": response.message
+                })
+            
+            # Add data part with structured response
+            parts.append({
+                "kind": "data",
+                "data": response.model_dump()
+            })
+            
+            # Create the status message
+            status_message = {
+                "kind": "message",
+                "messageId": f"msg_{datetime.now().timestamp()}",
+                "parts": parts,
+                "role": "agent"
+            }
+            
+            # Build the task response with proper status structure
             task_response = {
                 "id": task_id,
                 "kind": "task",
-                "status": task_status,  # Using proper A2A status enum
                 "contextId": context_id or response.context_id,
-                "output": {
-                    "parts": [{
-                        "contentType": "application/json",
-                        "content": response.model_dump()
-                    }]
+                "status": {
+                    "state": task_state,
+                    "timestamp": datetime.now().isoformat(),
+                    "message": status_message
+                },
+                "metadata": {
+                    "activation_status": response.status,
+                    "platform": internal_request.platform
                 }
-            }
-            
-            if task_status == "Completed":
-                task_response["completedAt"] = datetime.now().isoformat()
-            
-            # Add optional metadata
-            task_response["metadata"] = {
-                "activation_status": response.status,
-                "platform": internal_request.platform
             }
             
             return task_response
@@ -351,15 +418,22 @@ async def handle_a2a_task(request: Dict[str, Any]):
                 "kind": "task",
                 "status": "Failed",
                 "contextId": context_id,
-                "error": {
-                    "code": -32602,  # Invalid params (JSON-RPC numeric code)
-                    "message": error_message
+                "status": {
+                    "state": "failed",
+                    "timestamp": datetime.now().isoformat(),
+                    "message": {
+                        "kind": "message",
+                        "messageId": f"msg_{datetime.now().timestamp()}",
+                        "parts": [{
+                            "kind": "text",
+                            "text": error_message
+                        }],
+                        "role": "agent"
+                    }
                 },
-                "output": {
-                    "parts": [{
-                        "contentType": "text/plain",
-                        "content": error_message
-                    }]
+                "metadata": {
+                    "error_code": -32602,
+                    "error_message": error_message
                 }
             }
             
@@ -374,15 +448,22 @@ async def handle_a2a_task(request: Dict[str, Any]):
             "kind": "task",
             "status": "Failed",  # Proper A2A status
             "contextId": context_id,
-            "error": {
-                "code": -32603,  # Internal error (JSON-RPC numeric code)
-                "message": str(e)
+            "status": {
+                "state": "failed",
+                "timestamp": datetime.now().isoformat(),
+                "message": {
+                    "kind": "message",
+                    "messageId": f"msg_{datetime.now().timestamp()}",
+                    "parts": [{
+                        "kind": "text",
+                        "text": str(e)
+                    }],
+                    "role": "agent"
+                }
             },
-            "output": {
-                "parts": [{
-                    "contentType": "text/plain",
-                    "content": str(e)
-                }]
+            "metadata": {
+                "error_code": -32603,
+                "error_message": str(e)
             }
         }
 
