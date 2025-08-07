@@ -1,8 +1,10 @@
-INFO:     Started server process [17356]
+INFO:     Started server process [27054]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+Unknown or missing task type: None
 Loaded adapter for platform: index-exchange
 Database initialized with sample data
-INFO:     127.0.0.1:57013 - "GET / HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57040 - "POST / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58119 - "POST / HTTP/1.1" 200 OK
+Unknown or missing task type: invalid
+INFO:     127.0.0.1:58145 - "POST / HTTP/1.1" 200 OK

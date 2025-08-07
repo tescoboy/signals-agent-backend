@@ -301,18 +301,39 @@ async def handle_a2a_task(request: Dict[str, Any]):
             return task_response
             
         else:
-            raise HTTPException(400, f"Unknown task type: {task_type}")
+            # Unknown or missing task type
+            error_message = f"Unknown or missing task type: {task_type}"
+            logger.warning(error_message)
+            return {
+                "id": task_id,
+                "kind": "task",
+                "status": "Failed",
+                "contextId": context_id,
+                "error": {
+                    "code": -32602,  # Invalid params (JSON-RPC numeric code)
+                    "message": error_message
+                },
+                "output": {
+                    "parts": [{
+                        "contentType": "text/plain",
+                        "content": error_message
+                    }]
+                }
+            }
             
+    except HTTPException as he:
+        # Pass through HTTP exceptions
+        raise he
     except Exception as e:
         logger.error(f"Task failed: {e}")
-        # Return A2A-compliant error response
+        # Return A2A-compliant error response with numeric code
         return {
             "id": task_id,
             "kind": "task",
             "status": "Failed",  # Proper A2A status
             "contextId": context_id,
             "error": {
-                "code": "TASK_EXECUTION_ERROR",
+                "code": -32603,  # Internal error (JSON-RPC numeric code)
                 "message": str(e)
             },
             "output": {
