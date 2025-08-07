@@ -654,41 +654,70 @@ async def handle_mcp_request(request: Request):
             tool_params = params.get("arguments", {})
             
             if tool_name == "get_signals":
-                # Convert deliver_to dict to proper object
+                # Validate and convert deliver_to dict to proper object
                 from schemas import DeliverySpecification
+                from pydantic import ValidationError
                 
-                # Handle missing deliver_to
-                if 'deliver_to' not in tool_params:
-                    tool_params['deliver_to'] = DeliverySpecification(
-                        platforms='all',
-                        countries=['US']
-                    )
-                elif isinstance(tool_params['deliver_to'], dict):
-                    deliver_to_raw = tool_params['deliver_to']
+                try:
+                    # Handle missing deliver_to - provide default
+                    if 'deliver_to' not in tool_params:
+                        tool_params['deliver_to'] = DeliverySpecification(
+                            platforms='all',
+                            countries=['US']
+                        )
+                    elif isinstance(tool_params['deliver_to'], dict):
+                        # Try to create DeliverySpecification directly
+                        tool_params['deliver_to'] = DeliverySpecification(**tool_params['deliver_to'])
                     
-                    # Handle different delivery specification formats
-                    if 'platforms' not in deliver_to_raw:
-                        # Legacy format or simplified format
-                        if 'platform' in deliver_to_raw:
-                            # Single platform specified
-                            deliver_to_raw = {
-                                'platforms': [{'platform': deliver_to_raw['platform']}],
-                                'countries': deliver_to_raw.get('countries', ['US'])
+                    result = main.get_signals.fn(**tool_params)
+                    
+                except ValidationError as e:
+                    # Return helpful error message with expected format
+                    error_details = []
+                    for error in e.errors():
+                        field = '.'.join(str(x) for x in error['loc'])
+                        error_details.append(f"  - {field}: {error['msg']}")
+                    
+                    return JSONResponse({
+                        "jsonrpc": "2.0",
+                        "error": {
+                            "code": -32602,
+                            "message": "Invalid parameters for deliver_to",
+                            "data": {
+                                "validation_errors": error_details,
+                                "expected_format": {
+                                    "deliver_to": {
+                                        "platforms": "all | [{platform: string, account?: string}, ...]",
+                                        "countries": ["US", "UK", "CA", "..."]
+                                    }
+                                },
+                                "examples": [
+                                    {
+                                        "description": "Search all platforms",
+                                        "deliver_to": {
+                                            "platforms": "all",
+                                            "countries": ["US"]
+                                        }
+                                    },
+                                    {
+                                        "description": "Search specific platform",
+                                        "deliver_to": {
+                                            "platforms": [{"platform": "index-exchange"}],
+                                            "countries": ["US"]
+                                        }
+                                    },
+                                    {
+                                        "description": "Platform with account",
+                                        "deliver_to": {
+                                            "platforms": [{"platform": "index-exchange", "account": "123456"}],
+                                            "countries": ["US", "UK"]
+                                        }
+                                    }
+                                ]
                             }
-                        else:
-                            # Default to all platforms
-                            deliver_to_raw = {
-                                'platforms': 'all',
-                                'countries': deliver_to_raw.get('countries', ['US'])
-                            }
-                    
-                    # Ensure countries field exists
-                    if 'countries' not in deliver_to_raw:
-                        deliver_to_raw['countries'] = ['US']
-                    
-                    tool_params['deliver_to'] = DeliverySpecification(**deliver_to_raw)
-                
-                result = main.get_signals.fn(**tool_params)
+                        },
+                        "id": request_id
+                    })
             elif tool_name == "activate_signal":
                 result = main.activate_signal.fn(**tool_params)
             else:
