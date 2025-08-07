@@ -71,6 +71,23 @@ def get_business_logic():
 
 # ===== A2A Protocol Endpoints =====
 
+@app.get("/")
+async def root():
+    """Root endpoint - return basic info or redirect to agent card."""
+    return {
+        "name": "Signals Activation Agent",
+        "description": "AI agent for discovering and activating audience signals",
+        "version": "1.0.0",
+        "agent_card": "/agent-card",
+        "protocols": ["a2a", "mcp"]
+    }
+
+@app.post("/")
+async def handle_a2a_root_task(request: Dict[str, Any]):
+    """Handle A2A task requests at root endpoint (A2A standard)."""
+    # A2A spec expects tasks to be posted to the root URL
+    return await handle_a2a_task(request)
+
 @app.get("/agent-card")
 async def get_agent_card(request: Request):
     """Return the A2A Agent Card compliant with the official spec."""
