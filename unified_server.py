@@ -291,13 +291,16 @@ async def handle_a2a_task(request: Dict[str, Any]):
             # Check if this is a contextual follow-up question
             query_lower = query.lower()
             
-            # Check for custom segment queries
+            # Check for custom segment/signal queries
             is_custom_segment_query = any([
                 "custom segment" in query_lower,
+                "custom signal" in query_lower,
                 "tell me about the custom" in query_lower,
+                "tell me more about the custom" in query_lower,
                 "what custom" in query_lower,
                 "explain the custom" in query_lower,
-                "describe the custom" in query_lower
+                "describe the custom" in query_lower,
+                "more about custom" in query_lower
             ])
             
             # Check for signal detail queries

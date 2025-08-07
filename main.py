@@ -164,12 +164,22 @@ def generate_discovery_message(signal_spec: str, signals: List[SignalResponse],
         else:
             cpm_str = "pricing varies"
         
-        # Count live deployments
-        live_count = sum(1 for s in signals for d in s.deployments if d.is_live)
+        # Count unique platforms with live deployments
+        live_platforms = set()
+        for s in signals:
+            for d in s.deployments:
+                if d.is_live:
+                    live_platforms.add(d.platform)
+        
+        platform_count = len(live_platforms)
+        if platform_count > 0:
+            platform_str = f"available on {platform_count} platform{'s' if platform_count != 1 else ''}"
+        else:
+            platform_str = "requiring activation"
         
         message_parts.append(
-            f"Found {total_found} signals for '{signal_spec}' with {coverage_str} coverage, "
-            f"{cpm_str} CPM, and {live_count} ready for immediate activation."
+            f"Found {total_found} signal{'s' if total_found != 1 else ''} for '{signal_spec}' with {coverage_str} coverage, "
+            f"{cpm_str} CPM, {platform_str}."
         )
     
     if custom_proposals:

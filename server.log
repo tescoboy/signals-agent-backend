@@ -1,28 +1,15 @@
 INFO:     Will watch for changes in these directories: ['/Users/brianokelley/Developer/signals-agent/.conductor/columbus']
 INFO:     Uvicorn running on http://localhost:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [39494] using StatReload
-INFO:     Started server process [39496]
+INFO:     Started reloader process [63182] using StatReload
+INFO:     Started server process [63184]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 Loaded adapter for platform: index-exchange
+Database already contains 10 segments, skipping data insertion
 Database initialized with sample data
-DEBUG: Query='can you tell me about the signal for sports?', Context=test_context, IsCustom=False, IsDetail=True
-INFO:     127.0.0.1:56944 - "POST /a2a/task HTTP/1.1" 200 OK
-DEBUG: Query='can you tell me about the signal for sports?', Context=test_context, IsCustom=False, IsDetail=True
-INFO:     127.0.0.1:56977 - "POST /a2a/task HTTP/1.1" 200 OK
-WARNING:  StatReload detected changes in 'unified_server.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [39496]
-INFO:     Started server process [39760]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  StatReload detected changes in 'database.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [39760]
-INFO:     Started server process [45870]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
+AI ranking failed (400 API key not valid. Please pass a valid API key. ), using 
+basic text matching
+Custom segment proposal generation failed (400 API key not valid. Please pass a 
+valid API key. )
+INFO:     127.0.0.1:60485 - "POST / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60518 - "POST /a2a/task HTTP/1.1" 200 OK
