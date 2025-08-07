@@ -7,8 +7,11 @@ from typing import List, Dict, Any
 
 def init_db():
     """Initialize the database with tables and sample data."""
-    conn = sqlite3.connect('signals_agent.db')
+    conn = sqlite3.connect('signals_agent.db', timeout=30.0)
     cursor = conn.cursor()
+    
+    # Enable WAL mode for better concurrent access
+    cursor.execute("PRAGMA journal_mode=WAL")
     
     # Create tables
     create_tables(cursor)
@@ -83,6 +86,33 @@ def create_tables(cursor: sqlite3.Cursor):
             FOREIGN KEY (signals_agent_segment_id) REFERENCES signal_segments (id),
             UNIQUE(signals_agent_segment_id, platform, account)
         )
+    """)
+    
+    # Unified contexts table for all context types (A2A-ready)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS contexts (
+            context_id TEXT PRIMARY KEY,
+            context_type TEXT NOT NULL CHECK (context_type IN ('discovery', 'activation', 'optimization', 'reporting')),
+            parent_context_id TEXT,
+            principal_id TEXT,
+            metadata TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'in_progress', 'completed', 'failed', 'expired')),
+            created_at TEXT NOT NULL,
+            completed_at TEXT,
+            expires_at TEXT NOT NULL,
+            FOREIGN KEY (parent_context_id) REFERENCES contexts (context_id)
+        )
+    """)
+    
+    # Create index for efficient lookups
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contexts_type_principal 
+        ON contexts (context_type, principal_id)
+    """)
+    
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contexts_parent 
+        ON contexts (parent_context_id)
     """)
     
 
@@ -206,6 +236,14 @@ def insert_sample_data(cursor: sqlite3.Cursor):
             'revenue_share_percentage': 18.0,
         }
     ]
+    
+    # Check if data already exists
+    cursor.execute("SELECT COUNT(*) FROM signal_segments")
+    existing_count = cursor.fetchone()[0]
+    
+    if existing_count > 0:
+        print(f"Database already contains {existing_count} segments, skipping data insertion")
+        return
     
     for segment in segments:
         cursor.execute("""

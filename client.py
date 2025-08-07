@@ -111,12 +111,23 @@ async def discover_signals(client: Client):
             # Fallback - shouldn't happen
             response = {"signals": [], "custom_segment_proposals": []}
         
+        # Display the message first
+        if response.get("message"):
+            console.print(Panel(response["message"], border_style="green", title="Summary"))
+        
+        # Display context ID
+        if response.get("context_id"):
+            console.print(f"[dim]Context ID: {response['context_id']}[/dim]")
+        
+        # Display clarification if needed
+        if response.get("clarification_needed"):
+            console.print(f"\n[yellow]💡 Tip: {response['clarification_needed']}[/yellow]")
+        
         if not response.get("signals"):
-            console.print("[yellow]No signals found matching your criteria[/yellow]")
             return
         
         # Display results in an attractive table format
-        console.print(f"\n[bold green]🎯 Found {len(response['signals'])} signals[/bold green]")
+        console.print(f"\n[bold green]🎯 Signal Details[/bold green]")
         
         # Create main results table
         table = Table(show_header=True, header_style="bold cyan", box=None)
@@ -226,9 +237,22 @@ async def activate_signal(client: Client):
     if principal_id:
         request_data["principal_id"] = principal_id
     
+    # Add context ID if available from discovery
+    context_id = Prompt.ask("[dim]Context ID (optional, from discovery)[/dim]", default="")
+    if context_id:
+        request_data["context_id"] = context_id
+    
     try:
         console.print("\n[dim]Activating signal...[/dim]")
         response = await client.call_tool("activate_signal", request_data)
+        
+        # Display the message first
+        if response.get("message"):
+            console.print(Panel(response["message"], border_style="cyan", title="Activation Status"))
+        
+        # Display context ID if linked
+        if response.get("context_id"):
+            console.print(f"[dim]Linked to discovery context: {response['context_id']}[/dim]")
         
         # Display status based on response
         status_emoji = {
@@ -240,17 +264,16 @@ async def activate_signal(client: Client):
         emoji = status_emoji.get(response.get('status', 'activating'), '🟡')
         status = response.get('status', 'activating').upper()
         
-        if response.get('status') == 'deployed':
-            console.print(f"[bold green]{emoji} Signal already deployed![/bold green]")
-            if response.get('deployed_at'):
-                console.print(f"Deployed: {response['deployed_at']}")
-        elif response.get('status') == 'activating':
-            console.print(f"[bold yellow]{emoji} Activation initiated![/bold yellow]")
+        console.print(f"\nStatus: {emoji} {status}")
+        
+        if response.get('deployed_at'):
+            console.print(f"Deployed: {response['deployed_at']}")
+        
+        if response.get('estimated_activation_duration_minutes') and response.get('status') == 'activating':
             console.print(f"Estimated Duration: {response['estimated_activation_duration_minutes']} minutes")
-        else:
-            console.print(f"[bold red]{emoji} Activation failed![/bold red]")
-            if response.get('error_message'):
-                console.print(f"Error: {response['error_message']}")
+        
+        if response.get('error_message'):
+            console.print(f"[red]Error: {response['error_message']}[/red]")
         
         console.print(f"Platform Segment ID: {response['decisioning_platform_segment_id']}")
         
@@ -363,12 +386,23 @@ async def quick_prompt():
                 # Fallback - shouldn't happen
                 response = {"signals": [], "custom_segment_proposals": []}
             
+            # Display the message first
+            if response.get("message"):
+                console.print(Panel(response["message"], border_style="green", title="Summary"))
+            
+            # Display context ID
+            if response.get("context_id"):
+                console.print(f"[dim]Context ID: {response['context_id']}[/dim]")
+            
+            # Display clarification if needed
+            if response.get("clarification_needed"):
+                console.print(f"\n[yellow]💡 Tip: {response['clarification_needed']}[/yellow]")
+            
             if not response.get("signals"):
-                console.print("[yellow]No signals found matching your criteria[/yellow]")
                 return
             
             # Display results using the same attractive format as interactive mode
-            console.print(f"[bold green]🎯 Found {len(response['signals'])} signals[/bold green]")
+            console.print(f"\n[bold green]🎯 Signal Details[/bold green]")
             
             # Create main results table
             table = Table(show_header=True, header_style="bold cyan", box=None)
