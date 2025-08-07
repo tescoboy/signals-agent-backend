@@ -18,3 +18,11 @@ INFO:     Finished server process [39496]
 INFO:     Started server process [39760]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'database.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [39760]
+INFO:     Started server process [45870]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

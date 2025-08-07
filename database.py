@@ -237,6 +237,14 @@ def insert_sample_data(cursor: sqlite3.Cursor):
         }
     ]
     
+    # Check if data already exists
+    cursor.execute("SELECT COUNT(*) FROM signal_segments")
+    existing_count = cursor.fetchone()[0]
+    
+    if existing_count > 0:
+        print(f"Database already contains {existing_count} segments, skipping data insertion")
+        return
+    
     for segment in segments:
         cursor.execute("""
             INSERT OR REPLACE INTO signal_segments 
