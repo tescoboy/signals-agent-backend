@@ -72,6 +72,39 @@ async def get_agent_card():
         "name": "Signals Activation Agent", 
         "description": "AI agent for discovering and activating audience signals",
         "version": "1.0.0",
+        "url": "https://audience-agent.fly.dev",
+        "defaultInputModes": ["text"],
+        "defaultOutputModes": ["text"],
+        "skills": [
+            {
+                "name": "discovery",
+                "description": "Discover audience signals using natural language",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "deliver_to": {"type": "object"},
+                        "max_results": {"type": "integer"},
+                        "principal_id": {"type": "string"}
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "activation",
+                "description": "Activate a signal on a platform",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "signal_id": {"type": "string"},
+                        "platform": {"type": "string"},
+                        "account": {"type": "string"},
+                        "context_id": {"type": "string"}
+                    },
+                    "required": ["signal_id", "platform"]
+                }
+            }
+        ],
         "capabilities": {
             "discovery": {
                 "description": "Discover audience signals using natural language",
@@ -102,8 +135,8 @@ async def get_agent_card():
         },
         "protocols": ["a2a", "mcp"],
         "endpoints": {
-            "a2a": "http://localhost:8000/a2a/task",
-            "mcp": "http://localhost:8000/mcp"
+            "a2a": "https://audience-agent.fly.dev/a2a/task",
+            "mcp": "https://audience-agent.fly.dev/mcp"
         }
     }
 
@@ -113,13 +146,22 @@ async def handle_a2a_task(request: Dict[str, Any]):
     """Handle A2A task requests."""
     task_id = request.get("taskId")
     task_type = request.get("type")
-    params = request.get("parameters", {})
+    
+    # Handle both standard A2A format (with parameters) and simplified format
+    if "parameters" in request:
+        params = request.get("parameters", {})
+    else:
+        # For simplified format, treat the whole request as parameters
+        params = {k: v for k, v in request.items() if k not in ["taskId", "type"]}
     
     try:
         if task_type == "discovery":
             # Convert to internal format
+            # Support 'query' at root level or in parameters
+            query = params.get("query", request.get("query", ""))
+            
             internal_request = GetSignalsRequest(
-                signal_spec=params.get("query", ""),
+                signal_spec=query,
                 deliver_to=params.get("deliver_to", {"platforms": "all", "countries": ["US"]}),
                 filters=params.get("filters"),
                 max_results=params.get("max_results", 10),
