@@ -1,13 +1,20 @@
-INFO:__main__:Starting Unified Server on localhost:8000
-INFO:__main__:- A2A Agent Card: http://localhost:8000/agent-card
-INFO:__main__:- A2A Tasks: http://localhost:8000/a2a/task
-INFO:__main__:- MCP Endpoint: http://localhost:8000/mcp
-INFO:__main__:- MCP SSE: http://localhost:8000/mcp/sse
-INFO:     Started server process [66130]
+INFO:     Will watch for changes in these directories: ['/Users/brianokelley/Developer/signals-agent/.conductor/columbus']
+INFO:     Uvicorn running on http://localhost:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [39494] using StatReload
+INFO:     Started server process [39496]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-ERROR:    [Errno 48] error while attempting to bind on address ('::1', 8000, 0, 0): [errno 48] address already in use
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
 Loaded adapter for platform: index-exchange
 Database initialized with sample data
+DEBUG: Query='can you tell me about the signal for sports?', Context=test_context, IsCustom=False, IsDetail=True
+INFO:     127.0.0.1:56944 - "POST /a2a/task HTTP/1.1" 200 OK
+DEBUG: Query='can you tell me about the signal for sports?', Context=test_context, IsCustom=False, IsDetail=True
+INFO:     127.0.0.1:56977 - "POST /a2a/task HTTP/1.1" 200 OK
+WARNING:  StatReload detected changes in 'unified_server.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [39496]
+INFO:     Started server process [39760]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

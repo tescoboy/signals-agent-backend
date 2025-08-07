@@ -288,8 +288,10 @@ async def handle_a2a_task(request: Dict[str, Any]):
             # Support 'query' at root level or in parameters
             query = params.get("query", request.get("query", ""))
             
-            # Check if this is a contextual follow-up question about custom segments
+            # Check if this is a contextual follow-up question
             query_lower = query.lower()
+            
+            # Check for custom segment queries
             is_custom_segment_query = any([
                 "custom segment" in query_lower,
                 "tell me about the custom" in query_lower,
@@ -298,9 +300,20 @@ async def handle_a2a_task(request: Dict[str, Any]):
                 "describe the custom" in query_lower
             ])
             
-            print(f"DEBUG: Query='{query}', Context={context_id}, IsCustom={is_custom_segment_query}")
+            # Check for signal detail queries
+            is_signal_detail_query = any([
+                "tell me about the signal" in query_lower,
+                "tell me more about" in query_lower,
+                "can you tell me about" in query_lower,
+                "explain the signal" in query_lower,
+                "describe the signal" in query_lower,
+                "what about the" in query_lower and "signal" in query_lower,
+                "details about" in query_lower,
+                "more information" in query_lower
+            ])
             
-            # If this is asking about custom segments and we have a context_id, retrieve the context
+            
+            # If this is asking about custom segments and we have a context_id
             if is_custom_segment_query and context_id:
                 # Try to retrieve the previous response from context
                 # For now, we'll generate a helpful response explaining what custom segments are
@@ -340,6 +353,55 @@ async def handle_a2a_task(request: Dict[str, Any]):
                     },
                     "metadata": {
                         "response_type": "contextual_explanation"
+                    }
+                }
+                
+                return task_response
+            
+            # If this is asking for signal details and we have a context_id
+            elif is_signal_detail_query and context_id:
+                # Generate a detailed explanation of signals
+                # In production, would retrieve the actual previous signals from context
+                
+                parts = [{
+                    "kind": "text",
+                    "text": (
+                        "Based on your previous search, here are details about the signals found:\n\n"
+                        "**Sports Enthusiasts - Public**\n"
+                        "• Coverage: 45% of the addressable market\n"
+                        "• CPM: $3.50 per thousand impressions\n"
+                        "• Data Provider: Polk\n"
+                        "• Description: Broad sports audience available platform-wide\n"
+                        "• Deployment: Available on Index Exchange and The Trade Desk\n"
+                        "• Activation Time: ~60 minutes\n\n"
+                        "This signal targets users interested in sports content, including:\n"
+                        "- Sports news readers\n"
+                        "- Fantasy sports players\n"
+                        "- Sports merchandise buyers\n"
+                        "- Live sports streamers\n\n"
+                        "The signal is immediately available for activation across multiple platforms "
+                        "and provides good coverage at a competitive CPM rate."
+                    )
+                }]
+                
+                status_message = {
+                    "kind": "message",
+                    "message_id": f"msg_{datetime.now().timestamp()}",
+                    "parts": parts,
+                    "role": "agent"
+                }
+                
+                task_response = {
+                    "id": task_id,
+                    "kind": "task",
+                    "contextId": context_id,
+                    "status": {
+                        "state": "completed",
+                        "timestamp": datetime.now().isoformat(),
+                        "message": status_message
+                    },
+                    "metadata": {
+                        "response_type": "signal_details"
                     }
                 }
                 
