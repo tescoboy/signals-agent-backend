@@ -656,8 +656,37 @@ async def handle_mcp_request(request: Request):
             if tool_name == "get_signals":
                 # Convert deliver_to dict to proper object
                 from schemas import DeliverySpecification
-                if 'deliver_to' in tool_params and isinstance(tool_params['deliver_to'], dict):
-                    tool_params['deliver_to'] = DeliverySpecification(**tool_params['deliver_to'])
+                
+                # Handle missing deliver_to
+                if 'deliver_to' not in tool_params:
+                    tool_params['deliver_to'] = DeliverySpecification(
+                        platforms='all',
+                        countries=['US']
+                    )
+                elif isinstance(tool_params['deliver_to'], dict):
+                    deliver_to_raw = tool_params['deliver_to']
+                    
+                    # Handle different delivery specification formats
+                    if 'platforms' not in deliver_to_raw:
+                        # Legacy format or simplified format
+                        if 'platform' in deliver_to_raw:
+                            # Single platform specified
+                            deliver_to_raw = {
+                                'platforms': [{'platform': deliver_to_raw['platform']}],
+                                'countries': deliver_to_raw.get('countries', ['US'])
+                            }
+                        else:
+                            # Default to all platforms
+                            deliver_to_raw = {
+                                'platforms': 'all',
+                                'countries': deliver_to_raw.get('countries', ['US'])
+                            }
+                    
+                    # Ensure countries field exists
+                    if 'countries' not in deliver_to_raw:
+                        deliver_to_raw['countries'] = ['US']
+                    
+                    tool_params['deliver_to'] = DeliverySpecification(**deliver_to_raw)
                 
                 result = main.get_signals.fn(**tool_params)
             elif tool_name == "activate_signal":
