@@ -74,8 +74,15 @@ def get_business_logic():
 @app.get("/agent-card")
 async def get_agent_card(request: Request):
     """Return the A2A Agent Card compliant with the official spec."""
-    # Build base URL dynamically
-    base_url = str(request.base_url).rstrip('/')
+    # Build base URL dynamically, respecting proxy headers
+    forwarded_proto = request.headers.get("X-Forwarded-Proto")
+    if forwarded_proto:
+        # We're behind a proxy, use the forwarded protocol
+        host = request.headers.get("Host", request.base_url.hostname)
+        base_url = f"{forwarded_proto}://{host}"
+    else:
+        # Direct connection, use the request's base URL
+        base_url = str(request.base_url).rstrip('/')
     
     # Build the agent card following A2A spec
     agent_card = {

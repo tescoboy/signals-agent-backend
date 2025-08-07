@@ -1,7 +1,8 @@
-INFO:     Started server process [5793]
+INFO:     Started server process [11119]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 Loaded adapter for platform: index-exchange
 Database initialized with sample data
-INFO:     127.0.0.1:55034 - "GET /agent-card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56038 - "GET /agent-card HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56080 - "GET /agent-card HTTP/1.1" 200 OK
