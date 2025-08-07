@@ -77,8 +77,10 @@ async def get_agent_card():
         "defaultOutputModes": ["text"],
         "skills": [
             {
+                "id": "discovery",
                 "name": "discovery",
                 "description": "Discover audience signals using natural language",
+                "tags": ["search", "discovery", "audience", "signals"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -91,8 +93,10 @@ async def get_agent_card():
                 }
             },
             {
+                "id": "activation",
                 "name": "activation",
                 "description": "Activate a signal on a platform",
+                "tags": ["activation", "deployment", "platform", "signals"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
