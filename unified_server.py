@@ -85,8 +85,42 @@ async def root():
 @app.post("/")
 async def handle_a2a_root_task(request: Dict[str, Any]):
     """Handle A2A task requests at root endpoint (A2A standard)."""
-    # A2A spec expects tasks to be posted to the root URL
-    return await handle_a2a_task(request)
+    # Check if this is a JSON-RPC message from A2A Inspector
+    if "jsonrpc" in request and request.get("method") == "message/send":
+        # Extract the actual message from JSON-RPC format
+        params = request.get("params", {})
+        message = params.get("message", {})
+        message_parts = message.get("parts", [])
+        
+        # Extract text from message parts
+        query = ""
+        for part in message_parts:
+            if part.get("kind") == "text":
+                query = part.get("text", "")
+                break
+        
+        # Convert to our expected task format
+        # Assume it's a discovery task since that's the most common
+        task_request = {
+            "taskId": request.get("id"),
+            "type": "discovery",
+            "parameters": {
+                "query": query
+            }
+        }
+        
+        # Process the task
+        result = await handle_a2a_task(task_request)
+        
+        # Wrap response in JSON-RPC format
+        return {
+            "jsonrpc": "2.0",
+            "id": request.get("id"),
+            "result": result
+        }
+    else:
+        # Standard A2A task format
+        return await handle_a2a_task(request)
 
 @app.get("/agent-card")
 async def get_agent_card(request: Request):
