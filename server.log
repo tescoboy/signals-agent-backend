@@ -1,4 +1,4 @@
-INFO:     Started server process [57427]
+INFO:     Started server process [66314]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
@@ -8,4 +8,4 @@ AI ranking failed (400 API key not valid. Please pass a valid API key. ), using
 basic text matching
 Custom segment proposal generation failed (400 API key not valid. Please pass a 
 valid API key. )
-INFO:     127.0.0.1:62365 - "POST / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63599 - "POST / HTTP/1.1" 200 OK

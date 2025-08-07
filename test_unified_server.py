@@ -179,6 +179,57 @@ class UnifiedServerTester:
             self.test_results.append(("MCP Discovery", "❌ FAIL", str(e)))
             return None
     
+    def test_jsonrpc_message_send(self):
+        """Test JSON-RPC message/send format (A2A Inspector style)."""
+        try:
+            req = {
+                "jsonrpc": "2.0",
+                "method": "message/send", 
+                "params": {
+                    "message": {
+                        "parts": [{
+                            "kind": "text",
+                            "text": "luxury car buyers"
+                        }]
+                    }
+                },
+                "id": "msg_test_123"
+            }
+            
+            resp = requests.post(f"{self.base_url}/", json=req)
+            resp.raise_for_status()
+            data = resp.json()
+            
+            # Check JSON-RPC wrapper
+            assert data["jsonrpc"] == "2.0"
+            assert data["id"] == req["id"]
+            assert "result" in data
+            
+            # Check Message format (not Task format)
+            result = data["result"]
+            assert result["kind"] == "message"
+            assert "messageId" in result
+            assert "parts" in result  
+            assert "role" in result
+            assert result["role"] == "assistant"
+            
+            # Verify content structure
+            parts = result["parts"]
+            assert len(parts) > 0
+            content = parts[0].get("content", {})
+            signal_count = len(content.get("signals", []))
+            
+            self.test_results.append((
+                "JSON-RPC message/send",
+                "✅ PASS", 
+                f"Message format with {signal_count} signals"
+            ))
+            return True
+            
+        except Exception as e:
+            self.test_results.append(("JSON-RPC message/send", "❌ FAIL", str(e)))
+            return False
+
     def test_cross_protocol_activation(self, discovery_context_id):
         """Test activation with context from different protocol."""
         try:
@@ -257,6 +308,9 @@ class UnifiedServerTester:
             # Discovery tests - save context IDs
             a2a_context = self.test_a2a_discovery()
             mcp_context = self.test_mcp_discovery()
+            
+            # JSON-RPC message/send test
+            self.test_jsonrpc_message_send()
             
             # MCP tools
             self.test_mcp_tools_list()

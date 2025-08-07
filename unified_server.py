@@ -110,13 +110,21 @@ async def handle_a2a_root_task(request: Dict[str, Any]):
         }
         
         # Process the task
-        result = await handle_a2a_task(task_request)
+        task_result = await handle_a2a_task(task_request)
+        
+        # For message/send requests, return Message format instead of Task format
+        message_response = {
+            "kind": "message",
+            "messageId": f"msg_{datetime.now().timestamp()}",
+            "parts": task_result.get("output", {}).get("parts", []),
+            "role": "assistant"
+        }
         
         # Wrap response in JSON-RPC format
         return {
             "jsonrpc": "2.0",
             "id": request.get("id"),
-            "result": result
+            "result": message_response
         }
     else:
         # Standard A2A task format
