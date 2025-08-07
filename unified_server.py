@@ -3,7 +3,7 @@
 
 import asyncio
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 from contextlib import asynccontextmanager
 
@@ -11,6 +11,13 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+
+# Import A2A types for proper validation
+try:
+    from a2a.types import AgentCard, AgentSkill, AgentCapabilities
+    A2A_TYPES_AVAILABLE = True
+except ImportError:
+    A2A_TYPES_AVAILABLE = False
 
 from schemas import (
     GetSignalsRequest, GetSignalsResponse,
@@ -65,98 +72,119 @@ def get_business_logic():
 # ===== A2A Protocol Endpoints =====
 
 @app.get("/agent-card")
-async def get_agent_card():
-    """Return the A2A Agent Card."""
-    return {
-        "agentId": "signals-activation-agent",
+async def get_agent_card(request: Request):
+    """Return the A2A Agent Card compliant with the official spec."""
+    # Build base URL dynamically
+    base_url = str(request.base_url).rstrip('/')
+    
+    # Build the agent card following A2A spec
+    agent_card = {
+        # Note: 'agentId' is not in the official spec - the field is just 'name'
         "name": "Signals Activation Agent", 
         "description": "AI agent for discovering and activating audience signals",
         "version": "1.0.0",
-        "url": "https://audience-agent.fly.dev",
+        "url": base_url,  # Dynamic URL based on request
         "defaultInputModes": ["text"],
         "defaultOutputModes": ["text"],
+        "capabilities": {  # Required by spec
+            "streaming": False,
+            "batchProcessing": False,
+            "concurrentTasks": True
+        },
         "skills": [
             {
                 "id": "discovery",
-                "name": "discovery",
+                "name": "Signal Discovery",
                 "description": "Discover audience signals using natural language",
                 "tags": ["search", "discovery", "audience", "signals"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string"},
-                        "deliver_to": {"type": "object"},
-                        "max_results": {"type": "integer"},
-                        "principal_id": {"type": "string"}
+                        "query": {
+                            "type": "string",
+                            "description": "Natural language query for signal discovery"
+                        },
+                        "deliver_to": {
+                            "type": "object",
+                            "description": "Delivery specification"
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum number of results to return"
+                        },
+                        "principal_id": {
+                            "type": "string",
+                            "description": "Principal identifier for access control"
+                        }
                     },
                     "required": ["query"]
                 }
             },
             {
                 "id": "activation",
-                "name": "activation",
+                "name": "Signal Activation",
                 "description": "Activate a signal on a platform",
                 "tags": ["activation", "deployment", "platform", "signals"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "signal_id": {"type": "string"},
-                        "platform": {"type": "string"},
-                        "account": {"type": "string"},
-                        "context_id": {"type": "string"}
+                        "signal_id": {
+                            "type": "string",
+                            "description": "ID of the signal to activate"
+                        },
+                        "platform": {
+                            "type": "string",
+                            "description": "Target platform for activation"
+                        },
+                        "account": {
+                            "type": "string",
+                            "description": "Platform account identifier"
+                        },
+                        "context_id": {
+                            "type": "string",
+                            "description": "Context ID from discovery"
+                        }
                     },
                     "required": ["signal_id", "platform"]
                 }
             }
-        ],
-        "capabilities": {
-            "discovery": {
-                "description": "Discover audience signals using natural language",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string"},
-                        "deliver_to": {"type": "object"},
-                        "max_results": {"type": "integer"},
-                        "principal_id": {"type": "string"}
-                    },
-                    "required": ["query"]
-                }
-            },
-            "activation": {
-                "description": "Activate a signal on a platform",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "signal_id": {"type": "string"},
-                        "platform": {"type": "string"},
-                        "account": {"type": "string"},
-                        "context_id": {"type": "string"}
-                    },
-                    "required": ["signal_id", "platform"]
-                }
-            }
-        },
-        "protocols": ["a2a", "mcp"],
-        "endpoints": {
-            "a2a": "https://audience-agent.fly.dev/a2a/task",
-            "mcp": "https://audience-agent.fly.dev/mcp"
-        }
+        ]
     }
+    
+    # Add optional fields that help with discovery
+    agent_card["protocolVersion"] = "0.2"  # A2A protocol version
+    agent_card["provider"] = {
+        "name": "Signals Agent",
+        "url": base_url
+    }
+    
+    # If we have the official types, validate the card
+    if A2A_TYPES_AVAILABLE:
+        try:
+            # Validate using official AgentCard type
+            validated = AgentCard(**agent_card)
+            return validated.model_dump(exclude_none=True)
+        except Exception as e:
+            logger.warning(f"Agent card validation failed: {e}")
+            # Return unvalidated card if validation fails
+    
+    return agent_card
 
 
 @app.post("/a2a/task")
 async def handle_a2a_task(request: Dict[str, Any]):
-    """Handle A2A task requests."""
-    task_id = request.get("taskId")
+    """Handle A2A task requests following the official spec."""
+    # Extract task metadata
+    task_id = request.get("taskId") or f"task_{datetime.now().timestamp()}"
     task_type = request.get("type")
+    context_id = request.get("contextId")
     
     # Handle both standard A2A format (with parameters) and simplified format
     if "parameters" in request:
         params = request.get("parameters", {})
     else:
         # For simplified format, treat the whole request as parameters
-        params = {k: v for k, v in request.items() if k not in ["taskId", "type"]}
+        params = {k: v for k, v in request.items() if k not in ["taskId", "type", "contextId"]}
     
     try:
         if task_type == "discovery":
@@ -181,21 +209,29 @@ async def handle_a2a_task(request: Dict[str, Any]):
                 principal_id=internal_request.principal_id
             )
             
-            # Convert to A2A format
-            return {
-                "taskId": task_id,
-                "status": "completed",
+            # Build A2A-compliant response
+            task_response = {
+                "id": task_id,  # Changed from taskId to id per spec
+                "kind": "task",  # Added required field
+                "status": "Completed",  # Capital C per spec enum
+                "contextId": context_id or response.context_id,
                 "completedAt": datetime.now().isoformat(),
-                "parts": [{
-                    "contentType": "application/json",
-                    "content": response.model_dump()
-                }],
-                "artifact": {
-                    "type": "discovery_results",
-                    "context_id": response.context_id,
-                    "signal_count": len(response.signals)
+                "output": {  # Changed from parts to output per spec
+                    "parts": [{
+                        "contentType": "application/json",
+                        "content": response.model_dump()
+                    }]
                 }
             }
+            
+            # Add optional metadata
+            if response.signals:
+                task_response["metadata"] = {
+                    "signal_count": len(response.signals),
+                    "context_id": response.context_id
+                }
+            
+            return task_response
             
         elif task_type == "activation":
             # Convert to internal format
@@ -203,7 +239,7 @@ async def handle_a2a_task(request: Dict[str, Any]):
                 signals_agent_segment_id=params.get("signal_id", ""),
                 platform=params.get("platform", ""),
                 account=params.get("account"),
-                context_id=params.get("context_id")
+                context_id=params.get("context_id") or context_id
             )
             
             # Call business logic
@@ -214,35 +250,53 @@ async def handle_a2a_task(request: Dict[str, Any]):
                 context_id=internal_request.context_id
             )
             
-            # Convert to A2A format
-            status = "completed" if response.status == "deployed" else "in_progress"
-            return {
-                "taskId": task_id,
-                "status": status,
-                "completedAt": datetime.now().isoformat() if status == "completed" else None,
-                "parts": [{
-                    "contentType": "application/json",
-                    "content": response.model_dump()
-                }],
-                "artifact": {
-                    "type": "activation_result",
-                    "context_id": response.context_id,
-                    "status": response.status
+            # Build A2A-compliant response
+            task_status = "Completed" if response.status == "deployed" else "InProgress"
+            task_response = {
+                "id": task_id,
+                "kind": "task",
+                "status": task_status,  # Using proper A2A status enum
+                "contextId": context_id or response.context_id,
+                "output": {
+                    "parts": [{
+                        "contentType": "application/json",
+                        "content": response.model_dump()
+                    }]
                 }
             }
+            
+            if task_status == "Completed":
+                task_response["completedAt"] = datetime.now().isoformat()
+            
+            # Add optional metadata
+            task_response["metadata"] = {
+                "activation_status": response.status,
+                "platform": internal_request.platform
+            }
+            
+            return task_response
             
         else:
             raise HTTPException(400, f"Unknown task type: {task_type}")
             
     except Exception as e:
         logger.error(f"Task failed: {e}")
+        # Return A2A-compliant error response
         return {
-            "taskId": task_id,
-            "status": "failed",
-            "parts": [{
-                "contentType": "text/plain",
-                "content": str(e)
-            }]
+            "id": task_id,
+            "kind": "task",
+            "status": "Failed",  # Proper A2A status
+            "contextId": context_id,
+            "error": {
+                "code": "TASK_EXECUTION_ERROR",
+                "message": str(e)
+            },
+            "output": {
+                "parts": [{
+                    "contentType": "text/plain",
+                    "content": str(e)
+                }]
+            }
         }
 
 
