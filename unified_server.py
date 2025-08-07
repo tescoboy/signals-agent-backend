@@ -104,6 +104,7 @@ async def handle_a2a_root_task(request: Dict[str, Any]):
         task_request = {
             "taskId": request.get("id"),
             "type": "discovery",
+            "contextId": params.get("contextId"),  # Pass through context from JSON-RPC
             "parameters": {
                 "query": query
             }
@@ -114,32 +115,32 @@ async def handle_a2a_root_task(request: Dict[str, Any]):
         
         # For message/send requests, return Message format instead of Task format
         # Extract the response data from task result
-        task_output = task_result.get("output", {})
-        task_parts = task_output.get("parts", [])
+        # The task response has the message parts in status.message.parts
+        task_status = task_result.get("status", {})
+        task_message = task_status.get("message", {})
+        task_parts = task_message.get("parts", [])
         
         # Build proper A2A Message with correct parts format
         message_parts = []
         
         if task_parts:
-            # Get the response data
-            response_content = task_parts[0].get("content", {})
-            
-            # Add a TextPart with the summary message
-            if "message" in response_content:
-                message_parts.append({
-                    "kind": "text",
-                    "text": response_content["message"]
-                })
-            
-            # Add a DataPart with structured data if available
-            if "signals" in response_content or "context_id" in response_content:
-                message_parts.append({
-                    "kind": "data", 
-                    "data": {
-                        "contentType": "application/json",
-                        "content": response_content
-                    }
-                })
+            # Copy the parts from the task response
+            for part in task_parts:
+                if part.get("kind") == "text":
+                    message_parts.append({
+                        "kind": "text",
+                        "text": part.get("text", "")
+                    })
+                elif part.get("kind") == "data":
+                    # Get the data part
+                    data = part.get("data", {})
+                    message_parts.append({
+                        "kind": "data", 
+                        "data": {
+                            "contentType": "application/json",
+                            "content": data
+                        }
+                    })
         
         message_response = {
             "kind": "message",
@@ -287,6 +288,63 @@ async def handle_a2a_task(request: Dict[str, Any]):
             # Support 'query' at root level or in parameters
             query = params.get("query", request.get("query", ""))
             
+            # Check if this is a contextual follow-up question about custom segments
+            query_lower = query.lower()
+            is_custom_segment_query = any([
+                "custom segment" in query_lower,
+                "tell me about the custom" in query_lower,
+                "what custom" in query_lower,
+                "explain the custom" in query_lower,
+                "describe the custom" in query_lower
+            ])
+            
+            print(f"DEBUG: Query='{query}', Context={context_id}, IsCustom={is_custom_segment_query}")
+            
+            # If this is asking about custom segments and we have a context_id, retrieve the context
+            if is_custom_segment_query and context_id:
+                # Try to retrieve the previous response from context
+                # For now, we'll generate a helpful response explaining what custom segments are
+                # In a production system, you'd store and retrieve the actual context
+                
+                parts = [{
+                    "kind": "text",
+                    "text": (
+                        "Custom segments are AI-generated audience proposals based on your search criteria. "
+                        "These segments don't exist yet but can be created on demand by combining existing data signals. "
+                        "\n\nTo see custom segment proposals, run a discovery query first (e.g., 'sports audiences'). "
+                        "The system will analyze available segments and suggest custom combinations that better match your needs. "
+                        "\n\nEach custom segment proposal includes:\n"
+                        "• A descriptive name\n"
+                        "• Estimated coverage and CPM\n"
+                        "• The rationale for why it matches your criteria\n"
+                        "• A unique ID for activation\n\n"
+                        "You can activate these custom segments using their IDs, and they'll be deployed to your chosen platforms."
+                    )
+                }]
+                
+                status_message = {
+                    "kind": "message",
+                    "message_id": f"msg_{datetime.now().timestamp()}",
+                    "parts": parts,
+                    "role": "agent"
+                }
+                
+                task_response = {
+                    "id": task_id,
+                    "kind": "task",
+                    "contextId": context_id,
+                    "status": {
+                        "state": "completed",
+                        "timestamp": datetime.now().isoformat(),
+                        "message": status_message
+                    },
+                    "metadata": {
+                        "response_type": "contextual_explanation"
+                    }
+                }
+                
+                return task_response
+            
             internal_request = GetSignalsRequest(
                 signal_spec=query,
                 deliver_to=params.get("deliver_to", {"platforms": "all", "countries": ["US"]}),
@@ -305,9 +363,6 @@ async def handle_a2a_task(request: Dict[str, Any]):
             )
             
             # Build A2A SDK-compliant response
-            # The SDK expects a Task with TaskStatus containing state field
-            from a2a.types import TaskState, TaskStatus, Message, TextPart, DataPart, Role
-            
             # Create parts for the message
             parts = []
             if response.message:
@@ -325,7 +380,7 @@ async def handle_a2a_task(request: Dict[str, Any]):
             # Create the status message
             status_message = {
                 "kind": "message",
-                "messageId": f"msg_{datetime.now().timestamp()}",
+                "message_id": f"msg_{datetime.now().timestamp()}",
                 "parts": parts,
                 "role": "agent"
             }
@@ -386,7 +441,7 @@ async def handle_a2a_task(request: Dict[str, Any]):
             # Create the status message
             status_message = {
                 "kind": "message",
-                "messageId": f"msg_{datetime.now().timestamp()}",
+                "message_id": f"msg_{datetime.now().timestamp()}",
                 "parts": parts,
                 "role": "agent"
             }
@@ -423,7 +478,7 @@ async def handle_a2a_task(request: Dict[str, Any]):
                     "timestamp": datetime.now().isoformat(),
                     "message": {
                         "kind": "message",
-                        "messageId": f"msg_{datetime.now().timestamp()}",
+                        "message_id": f"msg_{datetime.now().timestamp()}",
                         "parts": [{
                             "kind": "text",
                             "text": error_message
@@ -453,7 +508,7 @@ async def handle_a2a_task(request: Dict[str, Any]):
                 "timestamp": datetime.now().isoformat(),
                 "message": {
                     "kind": "message",
-                    "messageId": f"msg_{datetime.now().timestamp()}",
+                    "message_id": f"msg_{datetime.now().timestamp()}",
                     "parts": [{
                         "kind": "text",
                         "text": str(e)

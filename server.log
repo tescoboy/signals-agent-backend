@@ -1,11 +1,13 @@
-INFO:     Started server process [66314]
+INFO:__main__:Starting Unified Server on localhost:8000
+INFO:__main__:- A2A Agent Card: http://localhost:8000/agent-card
+INFO:__main__:- A2A Tasks: http://localhost:8000/a2a/task
+INFO:__main__:- MCP Endpoint: http://localhost:8000/mcp
+INFO:__main__:- MCP SSE: http://localhost:8000/mcp/sse
+INFO:     Started server process [66130]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+ERROR:    [Errno 48] error while attempting to bind on address ('::1', 8000, 0, 0): [errno 48] address already in use
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
 Loaded adapter for platform: index-exchange
 Database initialized with sample data
-AI ranking failed (400 API key not valid. Please pass a valid API key. ), using 
-basic text matching
-Custom segment proposal generation failed (400 API key not valid. Please pass a 
-valid API key. )
-INFO:     127.0.0.1:63599 - "POST / HTTP/1.1" 200 OK
