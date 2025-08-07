@@ -159,6 +159,7 @@ async def handle_a2a_root_task(request: Dict[str, Any]):
         # Standard A2A task format
         return await handle_a2a_task(request)
 
+@app.get("/.well-known/agent.json")
 @app.get("/agent-card")
 async def get_agent_card(request: Request):
     """Return the A2A Agent Card compliant with the official spec."""

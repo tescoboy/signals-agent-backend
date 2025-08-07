@@ -1,6 +1,6 @@
 # Signals Agent Reference Implementation
 
-This project is a Python-based reference implementation of a Signals Activation Protocol agent. It demonstrates how to build a signals platform that integrates with AI assistants through the Model Context Protocol (MCP), supporting various signal types including:
+This project is a Python-based reference implementation of a Signals Activation Protocol agent with full support for both MCP (Model Context Protocol) and A2A (Agent-to-Agent) protocols. It demonstrates how to build a signals platform that integrates with AI assistants through multiple protocols, supporting various signal types including:
 - **Audience signals**: Demographic and behavioral targeting
 - **Contextual signals**: Content classification and context
 - **Geographical signals**: Location-based targeting
@@ -46,6 +46,23 @@ This reference implementation supports all three signal agent types:
 - Requires principal account with the signal agent
 - Account-specific segments plus platform-wide segments
 - Mixed pricing: negotiated rates and standard rates
+
+## Protocol Support
+
+### A2A (Agent-to-Agent) Protocol
+The agent fully implements the A2A protocol v0.2 specification:
+- **Agent Card**: Available at `/agent-card` and `/.well-known/agent.json`
+- **JSON-RPC 2.0**: Full support for `message/send` method
+- **Task Endpoints**: Discovery and activation tasks at `/a2a/task`
+- **Contextual Queries**: Maintains conversation context for follow-up questions
+- **CORS Support**: Enabled for web-based A2A tools like A2A Inspector
+- **Error Handling**: JSON-RPC compliant numeric error codes
+
+### MCP (Model Context Protocol)
+Full MCP support with:
+- **Tool Discovery**: `/mcp` endpoint for tool listing
+- **SSE Streaming**: Real-time updates via `/mcp/sse`
+- **Function Calling**: Standard MCP function invocation
 
 ## Getting Started
 
@@ -183,10 +200,40 @@ uv run python client.py --prompt "luxury" --principal acme_corp
 
 ## Testing
 
-Run the test suite:
+### A2A Protocol Compliance
+Test full A2A protocol compliance:
+
+```bash
+# Test local server
+uv run python test_a2a_protocol.py
+
+# Test deployed version
+uv run python test_a2a_protocol.py --deployed
+```
+
+### Unit Tests
+Run the core unit tests:
 
 ```bash
 uv run python -m unittest test_main.py
+```
+
+### Manual Testing
+Test specific endpoints:
+
+```bash
+# Test agent card
+curl http://localhost:8000/agent-card
+
+# Test A2A discovery
+curl -X POST http://localhost:8000/a2a/task \
+  -H "Content-Type: application/json" \
+  -d '{"type": "discovery", "parameters": {"query": "sports audiences"}}'
+
+# Test MCP endpoint
+curl -X POST http://localhost:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"method": "tools/list"}'
 ```
 
 ## Full Lifecycle Demo
