@@ -154,7 +154,7 @@ async def get_agent_card(request: Request):
     # Add optional fields that help with discovery
     agent_card["protocolVersion"] = "0.2"  # A2A protocol version
     agent_card["provider"] = {
-        "name": "Signals Agent",
+        "organization": "Signals Agent Team",  # Required field per A2A spec
         "url": base_url
     }
     
