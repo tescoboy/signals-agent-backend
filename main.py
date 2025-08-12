@@ -12,6 +12,10 @@ from typing import List, Optional, Dict, Any
 import google.generativeai as genai
 from fastmcp import FastMCP
 from rich.console import Console
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from database import init_db
 from schemas import *
@@ -250,8 +254,8 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
             "id": segment["id"],
             "name": segment["name"], 
             "description": segment["description"],
-            "coverage_percentage": segment["coverage_percentage"],
-            "cpm": segment["base_cpm"]
+            "coverage_percentage": segment.get("coverage_percentage", 0),
+            "cpm": segment.get("base_cpm", 0)
         })
     
     prompt = f"""
