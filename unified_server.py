@@ -901,27 +901,51 @@ async def _process_signals_request(spec: str, max_results: int = 10, principal_i
         
         logger.info(f"Created request: {request}")
         
-        # Call the business logic directly with monitoring
-        try:
-            # Track AI request start
-            if PRODUCTION_HARDENING_AVAILABLE:
-                ai_start_time = time.time()
-                AI_REQUEST_COUNT.labels(status='started').inc()
-            
-            result = get_signals.fn(
-                signal_spec=request.signal_spec,
-                deliver_to=request.deliver_to,
-                filters=request.filters,
-                max_results=max_results,
-                principal_id=request.principal_id
-            )
-            
-            # Track AI request success
-            if PRODUCTION_HARDENING_AVAILABLE:
-                ai_duration = time.time() - ai_start_time
-                AI_REQUEST_DURATION.observe(ai_duration)
-                AI_REQUEST_COUNT.labels(status='success').inc()
-                logger.info("AI request completed", request_id=request_id, duration=ai_duration)
+        # Call the business logic directly with monitoring and retry logic
+        max_retries = 3
+        retry_delay = 2  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                # Track AI request start
+                if PRODUCTION_HARDENING_AVAILABLE:
+                    ai_start_time = time.time()
+                    AI_REQUEST_COUNT.labels(status='started').inc()
+                
+                result = get_signals.fn(
+                    signal_spec=request.signal_spec,
+                    deliver_to=request.deliver_to,
+                    filters=request.filters,
+                    max_results=max_results,
+                    principal_id=request.principal_id
+                )
+                
+                # Track AI request success
+                if PRODUCTION_HARDENING_AVAILABLE:
+                    ai_duration = time.time() - ai_start_time
+                    AI_REQUEST_DURATION.observe(ai_duration)
+                    AI_REQUEST_COUNT.labels(status='success').inc()
+                    logger.info("AI request completed", request_id=request_id, duration=ai_duration)
+                
+                # Success - break out of retry loop
+                break
+                
+            except Exception as e:
+                # Track AI request failure
+                if PRODUCTION_HARDENING_AVAILABLE:
+                    AI_REQUEST_COUNT.labels(status='failed').inc()
+                    logger.error("AI request failed", request_id=request_id, error=str(e), attempt=attempt + 1)
+                else:
+                    logger.error(f"AI request failed: {e} (attempt {attempt + 1})")
+                
+                # If this is the last attempt, re-raise the exception
+                if attempt == max_retries - 1:
+                    raise
+                
+                # Wait before retry (exponential backoff)
+                wait_time = retry_delay * (2 ** attempt)
+                logger.info(f"Retrying AI request in {wait_time} seconds", request_id=request_id)
+                time.sleep(wait_time)
             
             logger.info(f"Business logic result type: {type(result)}")
             logger.info(f"Business logic result: {result}")

@@ -125,6 +125,8 @@ class BackgroundWarmer:
         ]
         self.running = False
         self.thread = None
+        self.max_retries = 3
+        self.retry_delay = 5  # seconds
         
     def start(self):
         """Start background warming"""
@@ -159,30 +161,54 @@ class BackgroundWarmer:
                 time.sleep(60)  # Wait 1 minute on error
     
     def _health_check(self):
-        """Perform health check to keep instance alive"""
-        try:
-            import requests
-            response = requests.get(f"{self.base_url}/health", timeout=10)
-            if response.status_code == 200:
-                logger.info("Health check successful")
-            else:
-                logger.warning("Health check failed", status=response.status_code)
-        except Exception as e:
-            logger.error("Health check error", error=str(e))
-    
-    def _pre_warm_cache(self):
-        """Pre-warm cache with popular queries"""
-        for query in self.popular_queries:
+        """Perform health check to keep instance alive with retry logic"""
+        for attempt in range(self.max_retries):
             try:
                 import requests
-                url = f"{self.base_url}/api/signals?spec={query}&max_results=5"
-                response = requests.get(url, timeout=30)
+                response = requests.get(f"{self.base_url}/health", timeout=10)
                 if response.status_code == 200:
-                    logger.info("Pre-warmed cache", query=query)
+                    logger.info("Health check successful")
+                    return True
                 else:
-                    logger.warning("Pre-warm failed", query=query, status=response.status_code)
+                    logger.warning("Health check failed", status=response.status_code, attempt=attempt + 1)
             except Exception as e:
-                logger.error("Pre-warm error", query=query, error=str(e))
+                logger.error("Health check error", error=str(e), attempt=attempt + 1)
+            
+            # Wait before retry (exponential backoff)
+            if attempt < self.max_retries - 1:
+                wait_time = self.retry_delay * (2 ** attempt)
+                logger.info(f"Retrying health check in {wait_time} seconds")
+                time.sleep(wait_time)
+        
+        logger.error("Health check failed after all retries")
+        return False
+    
+    def _pre_warm_cache(self):
+        """Pre-warm cache with popular queries and retry logic"""
+        for query in self.popular_queries:
+            success = False
+            for attempt in range(self.max_retries):
+                try:
+                    import requests
+                    url = f"{self.base_url}/api/signals?spec={query}&max_results=5"
+                    response = requests.get(url, timeout=30)
+                    if response.status_code == 200:
+                        logger.info("Pre-warmed cache", query=query)
+                        success = True
+                        break
+                    else:
+                        logger.warning("Pre-warm failed", query=query, status=response.status_code, attempt=attempt + 1)
+                except Exception as e:
+                    logger.error("Pre-warm error", query=query, error=str(e), attempt=attempt + 1)
+                
+                # Wait before retry (exponential backoff)
+                if attempt < self.max_retries - 1:
+                    wait_time = self.retry_delay * (2 ** attempt)
+                    logger.info(f"Retrying pre-warm for {query} in {wait_time} seconds")
+                    time.sleep(wait_time)
+            
+            if not success:
+                logger.error("Pre-warm failed after all retries", query=query)
 
 class RequestQueue:
     """Request queue for handling traffic spikes"""
