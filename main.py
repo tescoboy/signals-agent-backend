@@ -299,7 +299,25 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
     """
     
     try:
-        response = model.generate_content(prompt)
+        # Set a longer timeout for AI ranking (60 seconds)
+        import time
+        import asyncio
+        import concurrent.futures
+        
+        start_time = time.time()
+        
+        # Run AI call with timeout using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(model.generate_content, prompt)
+            try:
+                response = future.result(timeout=25)  # 25 second timeout (well within Render's 30s limit)
+            except concurrent.futures.TimeoutError:
+                console.print("[yellow]AI ranking timed out after 25 seconds, using basic text matching[/yellow]")
+                return basic_text_matching(signal_spec, segments, max_results), "text_matching_timeout"
+        
+        end_time = time.time()
+        console.print(f"[dim]AI ranking took {end_time - start_time:.2f} seconds[/dim]")
+        
         clean_json_str = response.text.strip().replace("```json", "").replace("```", "").strip()
         
         # Clean up any invalid characters that might cause JSON parsing issues
@@ -373,7 +391,17 @@ def generate_custom_segment_proposals(signal_spec: str, existing_segments: List[
     """
     
     try:
-        response = model.generate_content(prompt)
+        import concurrent.futures
+        
+        # Run AI call with timeout using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(model.generate_content, prompt)
+            try:
+                response = future.result(timeout=15)  # 15 second timeout
+            except concurrent.futures.TimeoutError:
+                console.print("[yellow]Custom segment proposal generation timed out, returning empty list[/yellow]")
+                return []
+        
         clean_json_str = response.text.strip().replace("```json", "").replace("```", "").strip()
         proposals = json.loads(clean_json_str)
         return proposals
@@ -548,11 +576,9 @@ def get_signals(
             params.append(filters.min_coverage_percentage)
     
     # Removed text filtering - let AI handle all ranking
-    # All segments will be sent to AI for proper ranking
-    
-    # Remove coverage-based ordering and increase limit to get all segments for AI ranking
+    # Optimize for Render timeout - limit segments sent to AI
     query += f" ORDER BY id LIMIT ?"
-    params.append(1000)  # Get many more segments for AI to choose from
+    params.append(50)  # Limit to 50 segments for faster AI processing on Render
     
     cursor.execute(query, params)
     db_segments = [dict(row) for row in cursor.fetchall()]

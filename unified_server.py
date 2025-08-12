@@ -63,6 +63,21 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
+# Add timeout middleware for long-running requests
+@app.middleware("http")
+async def timeout_middleware(request: Request, call_next):
+    """Add timeout handling for long-running requests."""
+    import asyncio
+    try:
+        # Set a 25-second timeout for all requests (within Render's limits)
+        response = await asyncio.wait_for(call_next(request), timeout=25.0)
+        return response
+    except asyncio.TimeoutError:
+        return JSONResponse(
+            status_code=408,
+            content={"error": "Request timeout - AI ranking is taking longer than expected"}
+        )
+
 
 # ===== Shared Business Logic =====
 
@@ -926,7 +941,13 @@ def run_unified_server(host: str = "0.0.0.0", port: int = None):
     logger.info(f"- Health Check: http://{host}:{port}/health")
     logger.info(f"- API Signals: http://{host}:{port}/api/signals")
     
-    uvicorn.run(app, host=host, port=port)
+    uvicorn.run(
+        app, 
+        host=host, 
+        port=port,
+        timeout_keep_alive=120,  # Keep connections alive for 2 minutes
+        timeout_graceful_shutdown=30  # Graceful shutdown timeout
+    )
 
 
 if __name__ == "__main__":
