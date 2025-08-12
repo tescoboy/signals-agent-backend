@@ -64,16 +64,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-@app.middleware("http")
-async def fix_double_slash(request: Request, call_next):
-    """Fix double slash in URLs."""
-    if request.url.path.startswith("//"):
-        # Remove the extra slash
-        new_path = request.url.path[1:]
-        new_url = request.url.replace(path=new_path)
-        request.scope["path"] = new_path
-        request.scope["raw_path"] = new_path.encode()
-    return await call_next(request)
+
 
 
 
@@ -806,6 +797,15 @@ async def health_check():
 
 @app.get("/api/signals")
 async def get_signals_api(spec: str, max_results: int = 10, principal_id: str = None):
+    """Simple API endpoint for signals search."""
+    return await _get_signals_impl(spec, max_results, principal_id)
+
+@app.get("//api/signals")
+async def get_signals_api_double_slash(spec: str, max_results: int = 10, principal_id: str = None):
+    """Handle double slash requests for signals search."""
+    return await _get_signals_impl(spec, max_results, principal_id)
+
+async def _get_signals_impl(spec: str, max_results: int = 10, principal_id: str = None):
     """Simple API endpoint for signals search."""
     try:
         
