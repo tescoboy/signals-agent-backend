@@ -88,6 +88,12 @@ async def root():
         "protocols": ["a2a", "mcp"]
     }
 
+@app.get("//api/signals")
+async def redirect_double_slash_signals(spec: str, max_results: int = 10, principal_id: str = None):
+    """Redirect double slash requests to correct endpoint."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/api/signals?spec={spec}&max_results={max_results}&principal_id={principal_id or ''}")
+
 @app.post("/")
 async def handle_a2a_root_task(request: Dict[str, Any]):
     """Handle A2A task requests at root endpoint (A2A standard)."""
