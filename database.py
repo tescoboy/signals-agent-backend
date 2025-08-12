@@ -300,9 +300,16 @@ def insert_sample_data(cursor: sqlite3.Cursor):
     cursor.execute("SELECT COUNT(*) FROM signal_segments")
     existing_count = cursor.fetchone()[0]
     
-    if existing_count > 0:
-        print(f"Database already contains {existing_count} segments, skipping data insertion")
+    # If we have more than 100 segments, assume we have real data and skip sample insertion
+    if existing_count > 100:
+        print(f"Database already contains {existing_count} segments (real data), skipping sample data insertion")
         return
+    elif existing_count > 0:
+        print(f"Database contains {existing_count} segments, but will replace with sample data")
+        # Clear existing data to replace with sample data
+        cursor.execute("DELETE FROM signal_segments")
+        cursor.execute("DELETE FROM platform_deployments")
+        cursor.connection.commit()
     
     for segment in segments:
         cursor.execute("""
