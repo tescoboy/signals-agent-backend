@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""Unified HTTP server supporting both MCP and A2A protocols."""
+"""Unified HTTP server supporting both MCP and A2A protocols with production hardening."""
 
 import asyncio
 import logging
+import uuid
+import os
+import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -15,6 +18,23 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Import production hardening
+try:
+    from production_hardening import (
+        initialize_production_hardening, cleanup_production_hardening,
+        rate_limiter, security_manager, request_queue, system_monitor,
+        request_context, logger, REQUEST_COUNT, REQUEST_DURATION,
+        AI_REQUEST_COUNT, AI_REQUEST_DURATION, CACHE_HIT_COUNT, CACHE_MISS_COUNT
+    )
+    from slowapi.errors import RateLimitExceeded
+    from slowapi import _rate_limit_exceeded_handler
+    PRODUCTION_HARDENING_AVAILABLE = True
+except ImportError as e:
+    print(f"Production hardening not available: {e}")
+    PRODUCTION_HARDENING_AVAILABLE = False
+    # Fallback logger
+    logger = logging.getLogger(__name__)
 
 # Import A2A types for proper validation
 try:
@@ -34,17 +54,25 @@ from adapters.manager import AdapterManager
 # Import the MCP tools
 import main
 
-logger = logging.getLogger(__name__)
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifecycle."""
+    """Manage application lifecycle with production hardening."""
     # Startup
     init_db()
+    
+    # Initialize production hardening if available
+    if PRODUCTION_HARDENING_AVAILABLE:
+        base_url = os.environ.get('BASE_URL', 'http://localhost:8000')
+        initialize_production_hardening(base_url)
+        logger.info("Production hardening initialized")
+    
     yield
+    
     # Shutdown
-    pass
+    if PRODUCTION_HARDENING_AVAILABLE:
+        cleanup_production_hardening()
+        logger.info("Production hardening cleaned up")
 
 
 app = FastAPI(
@@ -62,6 +90,11 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
+# Add rate limiting if available
+if PRODUCTION_HARDENING_AVAILABLE:
+    app.state.limiter = rate_limiter.get_limiter()
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 
@@ -795,20 +828,55 @@ async def health_check():
 # ===== API Endpoints =====
 
 @app.get("/api/signals")
-async def get_signals_api(spec: str, max_results: int = 10, principal_id: str = None):
-    """Simple API endpoint for signals search."""
-    return await _get_signals_impl(spec, max_results, principal_id)
+@rate_limiter.limiter.limit("100/minute") if PRODUCTION_HARDENING_AVAILABLE else lambda x: x
+async def get_signals_api(
+    spec: str, 
+    max_results: int = 10, 
+    principal_id: str = None,
+    request: Request = None
+):
+    """Production-hardened API endpoint for signals search."""
+    return await _get_signals_impl(spec, max_results, principal_id, request)
 
 @app.get("//api/signals")
-async def get_signals_api_double_slash(spec: str, max_results: int = 10, principal_id: str = None):
+@rate_limiter.limiter.limit("100/minute") if PRODUCTION_HARDENING_AVAILABLE else lambda x: x
+async def get_signals_api_double_slash(
+    spec: str, 
+    max_results: int = 10, 
+    principal_id: str = None,
+    request: Request = None
+):
     """Handle double slash requests for signals search."""
-    return await _get_signals_impl(spec, max_results, principal_id)
+    return await _get_signals_impl(spec, max_results, principal_id, request)
 
-async def _get_signals_impl(spec: str, max_results: int = 10, principal_id: str = None):
-    """Simple API endpoint for signals search."""
+async def _get_signals_impl(spec: str, max_results: int = 10, principal_id: str = None, request: Request = None):
+    """Production-hardened API endpoint for signals search."""
+    
+    # Generate request ID for tracking
+    request_id = str(uuid.uuid4())[:8]
+    
+    # Production hardening context
+    if PRODUCTION_HARDENING_AVAILABLE:
+        async with request_context(request_id, "/api/signals", "GET"):
+            return await _process_signals_request(spec, max_results, principal_id, request_id)
+    else:
+        # Fallback without production hardening
+        return await _process_signals_request(spec, max_results, principal_id, request_id)
+
+async def _process_signals_request(spec: str, max_results: int = 10, principal_id: str = None, request_id: str = None):
+    """Process signals request with production hardening."""
     try:
+        # Security validation
+        if PRODUCTION_HARDENING_AVAILABLE:
+            is_valid, error_msg = security_manager.validate_input(spec)
+            if not is_valid:
+                logger.warning("Security validation failed", request_id=request_id, error=error_msg)
+                raise HTTPException(status_code=400, detail=f"Invalid input: {error_msg}")
+            
+            # Sanitize input
+            spec = security_manager.sanitize_input(spec)
         
-        logger.info(f"API signals called with spec: '{spec}', max_results: {max_results}")
+        logger.info("API signals called", request_id=request_id, spec=spec, max_results=max_results)
         
         # Import the business logic directly
         try:
@@ -833,8 +901,13 @@ async def _get_signals_impl(spec: str, max_results: int = 10, principal_id: str 
         
         logger.info(f"Created request: {request}")
         
-        # Call the business logic directly
+        # Call the business logic directly with monitoring
         try:
+            # Track AI request start
+            if PRODUCTION_HARDENING_AVAILABLE:
+                ai_start_time = time.time()
+                AI_REQUEST_COUNT.labels(status='started').inc()
+            
             result = get_signals.fn(
                 signal_spec=request.signal_spec,
                 deliver_to=request.deliver_to,
@@ -842,6 +915,13 @@ async def _get_signals_impl(spec: str, max_results: int = 10, principal_id: str 
                 max_results=max_results,
                 principal_id=request.principal_id
             )
+            
+            # Track AI request success
+            if PRODUCTION_HARDENING_AVAILABLE:
+                ai_duration = time.time() - ai_start_time
+                AI_REQUEST_DURATION.observe(ai_duration)
+                AI_REQUEST_COUNT.labels(status='success').inc()
+                logger.info("AI request completed", request_id=request_id, duration=ai_duration)
             
             logger.info(f"Business logic result type: {type(result)}")
             logger.info(f"Business logic result: {result}")
@@ -858,7 +938,13 @@ async def _get_signals_impl(spec: str, max_results: int = 10, principal_id: str 
                 return {"signals": [], "ranking_method": "unknown"}
                 
         except Exception as business_error:
-            logger.error(f"Business logic error: {business_error}")
+            # Track AI request failure
+            if PRODUCTION_HARDENING_AVAILABLE:
+                AI_REQUEST_COUNT.labels(status='failed').inc()
+                logger.error("Business logic error", request_id=request_id, error=str(business_error))
+            else:
+                logger.error(f"Business logic error: {business_error}")
+            
             # Fallback: return sample data directly
             return [
                 {
@@ -919,9 +1005,85 @@ async def debug_info():
     except Exception as e:
         return {"error": str(e)}
 
+# ===== Production Monitoring Endpoints =====
 
+@app.get("/api/monitoring/health")
+async def health_check():
+    """Enhanced health check with system metrics."""
+    try:
+        health_status = {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "production_hardening": PRODUCTION_HARDENING_AVAILABLE
+        }
+        
+        if PRODUCTION_HARDENING_AVAILABLE:
+            # Add system metrics
+            system_stats = system_monitor.get_system_stats()
+            health_status.update({
+                "system_stats": system_stats,
+                "queue_size": request_queue.get_queue_size(),
+                "rate_limiter_active": True
+            })
+        
+        return health_status
+    except Exception as e:
+        logger.error("Health check failed", error=str(e))
+        return {"status": "unhealthy", "error": str(e)}
 
+@app.get("/api/monitoring/metrics")
+async def metrics_endpoint():
+    """Prometheus metrics endpoint."""
+    try:
+        if PRODUCTION_HARDENING_AVAILABLE:
+            import prometheus_client
+            return prometheus_client.generate_latest()
+        else:
+            return {"error": "Prometheus metrics not available"}
+    except Exception as e:
+        logger.error("Metrics endpoint failed", error=str(e))
+        return {"error": str(e)}
 
+@app.get("/api/monitoring/stats")
+async def system_stats():
+    """Detailed system statistics."""
+    try:
+        if PRODUCTION_HARDENING_AVAILABLE:
+            return {
+                "system_stats": system_monitor.get_system_stats(),
+                "queue_stats": {
+                    "size": request_queue.get_queue_size(),
+                    "max_size": 100
+                },
+                "production_hardening": {
+                    "rate_limiting": True,
+                    "security_validation": True,
+                    "background_warming": True,
+                    "structured_logging": True
+                }
+            }
+        else:
+            return {
+                "production_hardening": False,
+                "message": "Production hardening not available"
+            }
+    except Exception as e:
+        logger.error("Stats endpoint failed", error=str(e))
+        return {"error": str(e)}
+
+@app.get("/api/monitoring/warmup")
+async def manual_warmup():
+    """Manual warmup endpoint to keep instance alive."""
+    try:
+        if PRODUCTION_HARDENING_AVAILABLE and background_warmer:
+            # Trigger immediate warmup
+            background_warmer._health_check()
+            return {"status": "warmup_triggered", "timestamp": datetime.now().isoformat()}
+        else:
+            return {"status": "warmup_not_available"}
+    except Exception as e:
+        logger.error("Warmup failed", error=str(e))
+        return {"error": str(e)}
 
 # ===== Main =====
 
