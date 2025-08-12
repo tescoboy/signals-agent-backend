@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: signals-agent-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python unified_server.py
+    envVars:
+      - key: GEMINI_API_KEY
+        value: AIzaSyBQHcm-60eGwZTnVaS-vdoGjKHTLk0NYC0
+      - key: DATABASE_PATH
+        value: signals_agent.db
+      - key: ALLOWED_ORIGINS
+        value: "*"
+    healthCheckPath: /health
