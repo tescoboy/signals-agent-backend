@@ -782,6 +782,41 @@ async def health_check():
     }
 
 
+# ===== API Endpoints =====
+
+@app.get("/api/signals")
+async def get_signals_api(spec: str, max_results: int = 10):
+    """Simple API endpoint for signals search."""
+    try:
+        # Convert GET parameters to the format expected by the business logic
+        request_data = {
+            "type": "discovery",
+            "parameters": {
+                "query": spec,
+                "filters": {}
+            },
+            "taskId": "api-signals-request"
+        }
+        
+        # Call the existing business logic
+        result = await handle_a2a_task(request_data)
+        
+        # Extract signals from the response
+        if isinstance(result, dict) and "status" in result:
+            status = result["status"]
+            if "message" in status and "parts" in status["message"]:
+                for part in status["message"]["parts"]:
+                    if part.get("kind") == "signals":
+                        return part.get("signals", [])
+        
+        # Fallback: return empty array if no signals found
+        return []
+        
+    except Exception as e:
+        logger.error(f"API signals error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ===== Main =====
 
 def run_unified_server(host: str = "localhost", port: int = 8000):
