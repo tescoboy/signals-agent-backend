@@ -819,7 +819,7 @@ async def get_signals_api(spec: str, max_results: int = 10):
 
 # ===== Main =====
 
-def run_unified_server(host: str = "localhost", port: int = 8000):
+def run_unified_server(host: str = "0.0.0.0", port: int = 8000):
     """Run the unified server supporting both protocols."""
     logger.info(f"Starting Unified Server on {host}:{port}")
     logger.info(f"- A2A Agent Card: http://{host}:{port}/agent-card")
