@@ -59,9 +59,21 @@ app.add_middleware(
     allow_origins=["*"],  # Allow all origins in production, adjust as needed
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
+@app.middleware("http")
+async def fix_double_slash(request: Request, call_next):
+    """Fix double slash in URLs."""
+    if request.url.path.startswith("//"):
+        # Remove the extra slash
+        new_path = request.url.path[1:]
+        new_url = request.url.replace(path=new_path)
+        request.scope["path"] = new_path
+        request.scope["raw_path"] = new_path.encode()
+    return await call_next(request)
 
 
 
@@ -88,11 +100,7 @@ async def root():
         "protocols": ["a2a", "mcp"]
     }
 
-@app.get("//api/signals")
-async def redirect_double_slash_signals(spec: str, max_results: int = 10, principal_id: str = None):
-    """Redirect double slash requests to correct endpoint."""
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse(url=f"/api/signals?spec={spec}&max_results={max_results}&principal_id={principal_id or ''}")
+
 
 @app.post("/")
 async def handle_a2a_root_task(request: Dict[str, Any]):
