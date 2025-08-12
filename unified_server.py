@@ -788,6 +788,8 @@ async def health_check():
 async def get_signals_api(spec: str, max_results: int = 10):
     """Simple API endpoint for signals search."""
     try:
+        logger.info(f"API signals called with spec: '{spec}', max_results: {max_results}")
+        
         # Import the business logic directly
         from main import get_signals
         from schemas import GetSignalsRequest
@@ -799,20 +801,66 @@ async def get_signals_api(spec: str, max_results: int = 10):
             filters={}
         )
         
+        logger.info(f"Created request: {request}")
+        
         # Call the business logic directly
         result = get_signals.fn(request)
         
+        logger.info(f"Business logic result type: {type(result)}")
+        logger.info(f"Business logic result: {result}")
+        
         # Convert to list of signals
         if hasattr(result, 'signals'):
-            return result.signals
+            signals = result.signals
+            logger.info(f"Found {len(signals)} signals in result.signals")
+            return signals
         elif isinstance(result, dict) and 'signals' in result:
-            return result['signals']
+            signals = result['signals']
+            logger.info(f"Found {len(signals)} signals in result['signals']")
+            return signals
         else:
+            logger.warning(f"No signals found in result: {result}")
             return []
         
     except Exception as e:
         logger.error(f"API signals error: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/debug")
+async def debug_info():
+    """Debug endpoint to check database and environment."""
+    try:
+        import sqlite3
+        import os
+        
+        # Check database
+        db_path = os.environ.get('DATABASE_PATH', 'signals_agent.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Count signals
+        cursor.execute("SELECT COUNT(*) FROM signal_segments")
+        signal_count = cursor.fetchone()[0]
+        
+        # Get sample signals
+        cursor.execute("SELECT id, name FROM signal_segments LIMIT 5")
+        sample_signals = cursor.fetchall()
+        
+        conn.close()
+        
+        return {
+            "database_path": db_path,
+            "signal_count": signal_count,
+            "sample_signals": sample_signals,
+            "gemini_api_key_set": bool(os.environ.get('GEMINI_API_KEY')),
+            "port": os.environ.get('PORT', 'not set')
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # ===== Main =====
