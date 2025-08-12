@@ -826,11 +826,15 @@ def run_unified_server(host: str = "0.0.0.0", port: int = None):
         import os
         port = int(os.environ.get("PORT", 8000))
     
+    # Debug logging for Render deployment
+    logger.info(f"PORT environment variable: {os.environ.get('PORT', 'not set')}")
     logger.info(f"Starting Unified Server on {host}:{port}")
     logger.info(f"- A2A Agent Card: http://{host}:{port}/agent-card")
     logger.info(f"- A2A Tasks: http://{host}:{port}/a2a/task")
     logger.info(f"- MCP Endpoint: http://{host}:{port}/mcp")
     logger.info(f"- MCP SSE: http://{host}:{port}/mcp/sse")
+    logger.info(f"- Health Check: http://{host}:{port}/health")
+    logger.info(f"- API Signals: http://{host}:{port}/api/signals")
     
     uvicorn.run(app, host=host, port=port)
 
