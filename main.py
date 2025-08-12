@@ -455,7 +455,7 @@ config = load_config()
 
 # Initialize Gemini
 genai.configure(api_key=config.get("gemini_api_key", "your-api-key-here"))
-model = genai.GenerativeModel('gemini-2.0-flash-exp')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 # Initialize platform adapters
 adapter_manager = AdapterManager(config)
