@@ -3,8 +3,8 @@ services:
     name: signals-agent-backend
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: python unified_server.py
+    buildCommand: pip install -r requirements_simple.txt
+    startCommand: python unified_server_simple.py
     envVars:
       - key: GEMINI_API_KEY
         value: AIzaSyBQHcm-60eGwZTnVaS-vdoGjKHTLk0NYC0
