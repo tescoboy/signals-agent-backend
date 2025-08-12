@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signals Agent - AI-Powered Audience Targeting</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        /* Global gradient background */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            animation: gradientShift 10s ease-in-out infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); }
+            50% { background: linear-gradient(135deg, #764ba2 0%, #f093fb 50%, #667eea 100%); }
+        }
+        
+        /* Glass morphism containers */
+        .glass-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .metrics-box {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            color: white;
+        }
+        .metrics-box .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .metrics-box .metric-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .activate-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .activate-btn:hover {
+            background: #0056b3;
+            color: white;
+        }
+        .search-controls {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            color: white;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link.active {
+            color: white;
+            border-bottom: 2px solid white;
+            background: none;
+        }
+        
+        /* Form controls for glass morphism */
+        .form-control, .form-select {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+        
+        .form-control::placeholder, .form-select::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: white;
+            box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+        }
+        .table th {
+            background: rgba(255, 255, 255, 0.2);
+            border-top: none;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .table td {
+            vertical-align: middle;
+            font-size: 14px;
+            color: white;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .table {
+            color: white;
+        }
+        
+        /* Beautiful Loading Screen Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); }
+            50% { background: linear-gradient(135deg, #764ba2 0%, #f093fb 50%, #667eea 100%); }
+        }
+        
+        .loading-content {
+            text-align: center;
+            color: white;
+            max-width: 500px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .loading-icon {
+            font-size: 64px;
+            margin-bottom: 30px;
+            animation: float 3s ease-in-out infinite;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+        
+        .loading-text {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            animation: fadeInUp 0.8s ease-out;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .loading-subtext {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+            font-weight: 300;
+        }
+        
+        .loading-progress-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #fff, #f0f0f0, #fff);
+            border-radius: 10px;
+            animation: progress 4s ease-in-out infinite;
+            position: relative;
+        }
+        
+        .loading-progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            20% { width: 25%; }
+            40% { width: 50%; }
+            60% { width: 75%; }
+            80% { width: 90%; }
+            100% { width: 100%; }
+        }
+        
+        .loading-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            font-size: 14px;
+            opacity: 0.8;
+            font-weight: 500;
+        }
+        
+        .loading-step {
+            opacity: 0.4;
+            transition: all 0.5s ease;
+            transform: scale(0.9);
+            position: relative;
+        }
+        
+        .loading-step.active {
+            opacity: 1;
+            transform: scale(1.1);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .loading-step::before {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background: white;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        
+        .loading-step.active::before {
+            width: 100%;
+        }
+        
+        .loading-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: particleFloat 6s infinite linear;
+        }
+        
+        @keyframes particleFloat {
+            0% {
+                transform: translateY(100vh) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) translateX(100px);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .loading-dots {
+            display: inline-block;
+            animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: ""; }
+            40% { content: "."; }
+            60% { content: ".."; }
+            80%, 100% { content: "..."; }
+        }
+        
+        .loading-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            to { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid py-4">
+        <!-- Hero Section -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="text-center">
+                                         <h1 class="display-4 fw-bold text-white mb-4" style="text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);">Welcome to the GupAd Orchestration Platform</h1>
+                    <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                                                         <p class="lead text-white mb-4" style="text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);">
+                                 <strong>About This Demo Orchestration Platform</strong><br>
+                                 Think of the agents as musicians and the orchestration platform as the conductor, bringing in the right musician at the right moment to create a seamless performance.
+                             </p>
+                             <p class="text-white mb-4" style="opacity: 0.9; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);">
+                                 In this demo, the platform is connected to a single agent from a data provider called HarvinAds. In a full production environment, each data provider would build their own agent, and the orchestration platform would coordinate them all — ensuring the right agent is called at the right time to deliver the required data or capability.
+                             </p>
+                                                         <div class="glass-container">
+                                 <div class="card-body p-4 text-white">
+                                                                         <p class="mb-3 fw-semibold text-white">Simply enter your ad brief, and the Signals Agent will:</p>
+                                    <div class="row text-start">
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <i class="bi bi-check-circle-fill text-success me-3 fs-5"></i>
+                                                <span>Find matching segments from available providers</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex align-items-center mb-3">
+                                                <i class="bi bi-check-circle-fill text-success me-3 fs-5"></i>
+                                                <span>Propose additional AI-generated segments for consideration</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <p class="text-muted small mb-2">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    This is a demo environment. In a production setup, you would also have the option to activate segments directly into your chosen destination platform.
+                                </p>
+                                <p class="text-muted small">
+                                    <i class="bi bi-gear me-2"></i>
+                                    The platform is powered by the AdCP protocol.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Search for Signals</h5>
+                        <form id="searchForm" class="row g-3">
+                            <div class="col-md-8">
+                                <input type="text" class="form-control" id="queryInput" placeholder="Enter your signal specification (e.g., 'luxury cars', 'tech enthusiasts', 'fitness buffs')" required>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="maxResultsSelect">
+                                    <option value="5">5 results</option>
+                                    <option value="10" selected>10 results</option>
+                                    <option value="20">20 results</option>
+                                    <option value="50">50 results</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-search me-2"></i>Search
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" style="display: none;">
+            <!-- Metrics Boxes -->
+            <div class="row mb-4" id="metricsRow">
+                <div class="col-md-3">
+                    <div class="metrics-box">
+                        <div class="metric-value" id="foundCount">0</div>
+                        <div class="metric-label">Found</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metrics-box">
+                        <div class="metric-value" id="coverageRange">0%</div>
+                        <div class="metric-label">Coverage range</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metrics-box">
+                        <div class="metric-value" id="cpmRange">$0</div>
+                        <div class="metric-label">CPM range (USD)</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metrics-box">
+                        <div class="metric-value" id="rankingMethod">-</div>
+                        <div class="metric-label">Ranking</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Controls -->
+            <div class="search-controls">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" placeholder="Search..." id="tableSearch">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="providerFilter">
+                            <option value="">Provider: All</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" class="form-control" placeholder="Type" id="typeFilter">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control" placeholder="Coverage min" id="coverageMin">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="number" class="form-control" placeholder="CPM max" id="cpmMax">
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-secondary" id="resetFilters">Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-3" id="resultsTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" id="signals-tab" data-bs-toggle="tab" href="#signals-content">Signals (<span id="signalsCount">0</span>)</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="proposals-tab" data-bs-toggle="tab" href="#proposals-content">Custom Proposals (<span id="proposalsTabCount">0</span>)</a>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Signals Tab -->
+                <div class="tab-pane fade show active" id="signals-content">
+                    <div class="glass-container">
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="signalsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Provider</th>
+                                            <th>Cover.</th>
+                                            <th>CPM</th>
+                                            <th>Platform</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="signalsTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Proposals Tab -->
+                <div class="tab-pane fade" id="proposals-content">
+                    <div id="proposalsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Beautiful Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-glow"></div>
+        <div class="loading-particles" id="particles"></div>
+        <div class="loading-content">
+            <div class="loading-icon">
+                <i class="bi bi-search"></i>
+            </div>
+            <div class="loading-text">Searching for Signals</div>
+            <div class="loading-subtext">Analyzing your query with AI<span class="loading-dots"></span></div>
+            <div class="loading-progress-container">
+                <div class="loading-progress-bar"></div>
+            </div>
+            <div class="loading-steps">
+                <div class="loading-step active" id="step1">Processing Query</div>
+                <div class="loading-step" id="step2">AI Analysis</div>
+                <div class="loading-step" id="step3">Finding Matches</div>
+                <div class="loading-step" id="step4">Generating Results</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up form listener...');
+            const searchForm = document.getElementById('searchForm');
+            
+            if (searchForm) {
+                console.log('Found search form, adding submit listener...');
+                searchForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log('Form submitted!');
+                    
+                    const query = document.getElementById('queryInput').value.trim();
+                    const maxResults = document.getElementById('maxResultsSelect').value;
+                    
+                    console.log('Query:', query, 'Max results:', maxResults);
+                    
+                    if (query) {
+                        fetchSignals(query, maxResults);
+                    } else {
+                        alert('Please enter a search query');
+                    }
+                });
+            } else {
+                console.error('Search form not found!');
+            }
+            
+            // Test backend connectivity on page load
+            testBackendConnectivity();
+            
+            // Create floating particles
+            createParticles();
+        });
+        
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        async function testBackendConnectivity() {
+            try {
+                console.log('Testing backend connectivity...');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch('https://signals-agent-backend.onrender.com/health', {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    console.log('✅ Backend is reachable');
+                } else {
+                    console.log('⚠️ Backend responded but with status:', response.status);
+                }
+            } catch (error) {
+                console.log('❌ Backend connectivity test failed:', error.message);
+            }
+        }
+
+        async function fetchSignals(query, maxResults = 10) {
+            console.log('fetchSignals called with:', query, maxResults);
+            
+            // Show beautiful loading overlay
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
+            
+            // Start step animation
+            let currentStep = 1;
+            let stepInterval = setInterval(() => {
+                document.querySelectorAll('.loading-step').forEach(step => step.classList.remove('active'));
+                document.getElementById(`step${currentStep}`).classList.add('active');
+                currentStep = currentStep >= 4 ? 1 : currentStep + 1;
+            }, 1000);
+            
+            // Show loading state on button
+            const submitBtn = document.querySelector('#searchForm button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Searching...';
+            submitBtn.disabled = true;
+            
+            try {
+                const url = `https://signals-agent-backend.onrender.com/api/signals?spec=${encodeURIComponent(query)}&max_results=${maxResults}`;
+                console.log('Fetching from URL:', url);
+                
+                // Create AbortController for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    console.log('Request timeout - aborting');
+                    controller.abort();
+                }, 30000); // 30 second timeout
+                
+                const response = await fetch(url, {
+                    signal: controller.signal,
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Received data:', data);
+                
+                displayResults(data, query);
+                
+            } catch (error) {
+                clearTimeout(timeoutId);
+                console.error('Error fetching signals:', error);
+                
+                if (error.name === 'AbortError') {
+                    alert('Request timed out after 30 seconds. The backend might be slow to respond or down.');
+                } else {
+                    alert('Error fetching signals: ' + error.message);
+                }
+            } finally {
+                // Hide loading overlay with fade out
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                    loadingOverlay.style.opacity = '1';
+                }, 500);
+                
+                // Clear step animation
+                clearInterval(stepInterval);
+                document.querySelectorAll('.loading-step').forEach(step => step.classList.remove('active'));
+                document.getElementById('step1').classList.add('active');
+                
+                // Restore button state
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+
+        function displayResults(data, query) {
+            console.log('Displaying results:', data);
+            
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.style.display = 'block';
+            
+            // Update metrics
+            const signals = data.signals || [];
+            const proposals = data.custom_segment_proposals || [];
+            
+            document.getElementById('foundCount').textContent = signals.length;
+            document.getElementById('signalsCount').textContent = signals.length;
+            document.getElementById('proposalsTabCount').textContent = proposals.length;
+            document.getElementById('rankingMethod').textContent = data.ranking_method || 'N/A';
+            
+            // Calculate coverage and CPM ranges
+            if (signals.length > 0) {
+                const coverages = signals.map(s => s.coverage_percentage).filter(c => c != null);
+                const cpms = signals.map(s => s.pricing?.cpm).filter(c => c != null);
+                
+                if (coverages.length > 0) {
+                    const minCoverage = Math.min(...coverages);
+                    const maxCoverage = Math.max(...coverages);
+                    document.getElementById('coverageRange').textContent = `${minCoverage.toFixed(1)}% - ${maxCoverage.toFixed(1)}%`;
+                }
+                
+                if (cpms.length > 0) {
+                    const minCpm = Math.min(...cpms);
+                    const maxCpm = Math.max(...cpms);
+                    document.getElementById('cpmRange').textContent = `$${minCpm.toFixed(2)} - $${maxCpm.toFixed(2)}`;
+                }
+            }
+            
+            // Populate signals table
+            const tableBody = document.getElementById('signalsTableBody');
+            tableBody.innerHTML = '';
+            
+            signals.forEach(signal => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${signal.name || 'N/A'}</td>
+                    <td>${signal.data_provider || 'N/A'}</td>
+                    <td>${signal.coverage_percentage ? signal.coverage_percentage.toFixed(1) + '%' : 'N/A'}</td>
+                    <td>${signal.pricing?.cpm ? '$' + signal.pricing.cpm.toFixed(2) : 'N/A'}</td>
+                    <td>${signal.deployments?.map(d => d.platform).join(', ') || 'N/A'}</td>
+                    <td>
+                        <button class="activate-btn" onclick="activateSignal('${signal.signals_agent_segment_id}')">
+                            Activate
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            // Populate custom proposals
+            const proposalsContent = document.getElementById('proposalsContent');
+            if (proposals.length > 0) {
+                let proposalsHtml = '<div class="row">';
+                proposals.forEach(proposal => {
+                    proposalsHtml += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title mb-0">${proposal.proposed_name}</h6>
+                                        <span class="badge bg-primary">AI Generated</span>
+                                    </div>
+                                    <p class="card-text mb-3">${proposal.description}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            Coverage: ${proposal.estimated_coverage_percentage.toFixed(1)}% | 
+                                            CPM: $${proposal.estimated_cpm.toFixed(2)}
+                                        </small>
+                                        <button class="activate-btn" onclick="activateProposal('${proposal.custom_segment_id}')">
+                                            Activate
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                proposalsHtml += '</div>';
+                proposalsContent.innerHTML = proposalsHtml;
+            } else {
+                proposalsContent.innerHTML = '<p class="text-muted">No custom proposals available.</p>';
+            }
+            
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function activateSignal(signalId) {
+            alert(`Activating signal: ${signalId}`);
+            // TODO: Implement actual signal activation
+        }
+
+        function activateProposal(proposalId) {
+            alert(`Activating custom proposal: ${proposalId}`);
+            // TODO: Implement actual proposal activation
+        }
+    </script>
+    
+    <!-- Footer Information -->
+    <div class="container mt-5 pt-5 border-top">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span class="text-muted">This is a demo environment. In a production setup, you would also have the option to activate segments directly into your chosen destination platform.</span>
+                    </div>
+                    <div>
+                        <i class="bi bi-gear me-2"></i>
+                        <span class="text-muted">The platform is powered by the AdCP protocol.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
