@@ -272,31 +272,30 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
     Available segments:
     {json.dumps(segment_data, indent=2)}
     
-    CRITICAL: Only return segments that are DIRECTLY and CLEARLY relevant to the client's request.
+    Please find segments that are RELEVANT to the client's request. Be reasonable and inclusive:
     
     For example:
-    - For "eating out" → only segments about dining, restaurants, food, urban lifestyle
-    - For "luxury cars" → only segments about automotive, luxury goods, affluent consumers
-    - For "sports" → only segments about sports, fitness, athletic activities
-    
-    DO NOT return segments that are only tangentially related or completely irrelevant.
+    - For "food and beverage" → include segments about food, beverages, dining, cooking, recipes
+    - For "eating out" → include segments about dining, restaurants, food, urban lifestyle, entertainment
+    - For "luxury cars" → include segments about automotive, luxury goods, affluent consumers
+    - For "sports" → include segments about sports, fitness, athletic activities
     
     Please:
-    1. Rank segments by DIRECT relevance to the client's request (most relevant first)
-    2. Only include segments with clear, direct relevance
-    3. Select the top {max_results} most relevant segments (or fewer if not enough are relevant)
-    4. For each selected segment, provide a brief explanation of why it directly matches the request
+    1. Rank segments by relevance to the client's request (most relevant first)
+    2. Include segments that are reasonably related to the request
+    3. Select the top {max_results} most relevant segments
+    4. For each selected segment, provide a brief explanation of why it matches the request
     
     Return your response as a JSON array with this structure:
     [
       {{
         "segment_id": "segment_id",
         "relevance_score": 0.95,
-        "match_reason": "Brief explanation of why this segment directly matches the request"
+        "match_reason": "Brief explanation of why this segment matches the request"
       }}
     ]
     
-    If no segments are directly relevant, return an empty array.
+    If no segments are reasonably relevant, return an empty array.
     """
     
     try:
@@ -306,6 +305,8 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
         # Clean up any invalid characters that might cause JSON parsing issues
         import re
         clean_json_str = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', clean_json_str)
+        
+
         
         ai_rankings = json.loads(clean_json_str)
         
@@ -549,11 +550,13 @@ def get_signals(
     # Removed text filtering - let AI handle all ranking
     # All segments will be sent to AI for proper ranking
     
-    query += f" ORDER BY coverage_percentage DESC LIMIT ?"
-    params.append(min(max_results * 5, 100) if max_results else 25)  # Get more segments for AI to choose from
+    # Remove coverage-based ordering and increase limit to get all segments for AI ranking
+    query += f" ORDER BY id LIMIT ?"
+    params.append(1000)  # Get many more segments for AI to choose from
     
     cursor.execute(query, params)
     db_segments = [dict(row) for row in cursor.fetchall()]
+    console.print(f"[dim]Found {len(db_segments)} segments from database[/dim]")
     
     # Get segments from platform adapters
     platform_segments = []
@@ -569,6 +572,7 @@ def get_signals(
     
     # Combine database and platform segments
     all_segments = db_segments + platform_segments
+    console.print(f"[dim]Total segments for AI ranking: {len(all_segments)}[/dim]")
     
     # Use AI to rank segments by relevance to the signal spec
     ranked_segments, ranking_method = rank_signals_with_ai(signal_spec, all_segments, max_results or 5)
@@ -638,6 +642,19 @@ def get_signals(
                 for dep in deployments:
                     if dep['platform'] in requested_platforms:
                         platform_deployments.append(PlatformDeployment(**dep))
+        
+        # If no platform deployments found, create a default one for database segments
+        if not platform_deployments and not segment.get('platform'):
+            platform_deployments = [PlatformDeployment(
+                signals_agent_segment_id=segment['id'],
+                platform='index-exchange',  # Default platform
+                account=None,
+                decisioning_platform_segment_id=f"ix_{segment['id']}",
+                scope="platform-wide",
+                is_live=True,
+                deployed_at=datetime.now().isoformat(),
+                estimated_activation_duration_minutes=60
+            )]
         
         if platform_deployments:
             # Check for custom pricing for this principal
