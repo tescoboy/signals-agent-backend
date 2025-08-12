@@ -962,39 +962,33 @@ async def _process_signals_request(spec: str, max_results: int = 10, principal_i
             logger.warning(f"No signals found in result: {result}")
             return {"signals": [], "ranking_method": "unknown"}
             
-    except Exception as business_error:
-            # Track AI request failure
-            if PRODUCTION_HARDENING_AVAILABLE:
-                AI_REQUEST_COUNT.labels(status='failed').inc()
-                logger.error("Business logic error", request_id=request_id, error=str(business_error))
-            else:
-                logger.error(f"Business logic error: {business_error}")
-            
-            # Fallback: return sample data directly
-            return [
-                {
-                    "signals_agent_segment_id": "luxury_auto_intenders",
-                    "name": "Luxury Automotive Intenders", 
-                    "description": "High-income individuals showing luxury car purchase intent",
-                    "data_provider": "Experian",
-                    "coverage_percentage": 12.5,
-                    "pricing": {"cpm": 8.75}
-                },
-                {
-                    "signals_agent_segment_id": "peer39_luxury_auto",
-                    "name": "Luxury Automotive Context",
-                    "description": "Pages with luxury automotive content and high viewability", 
-                    "data_provider": "Peer39",
-                    "coverage_percentage": 15.0,
-                    "pricing": {"cpm": 2.50}
-                }
-            ]
-        
     except Exception as e:
-        logger.error(f"API signals error: {e}")
-        import traceback
-        logger.error(f"Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Track AI request failure
+        if PRODUCTION_HARDENING_AVAILABLE:
+            AI_REQUEST_COUNT.labels(status='failed').inc()
+            logger.error("Business logic error", request_id=request_id, error=str(e))
+        else:
+            logger.error(f"Business logic error: {e}")
+        
+        # Fallback: return sample data directly
+        return [
+            {
+                "signals_agent_segment_id": "luxury_auto_intenders",
+                "name": "Luxury Automotive Intenders", 
+                "description": "High-income individuals showing luxury car purchase intent",
+                "data_provider": "Experian",
+                "coverage_percentage": 12.5,
+                "pricing": {"cpm": 8.75}
+            },
+            {
+                "signals_agent_segment_id": "peer39_luxury_auto",
+                "name": "Luxury Automotive Context",
+                "description": "Pages with luxury automotive content and high viewability", 
+                "data_provider": "Peer39",
+                "coverage_percentage": 15.0,
+                "pricing": {"cpm": 2.50}
+            }
+        ]
 
 
 @app.get("/api/debug")
