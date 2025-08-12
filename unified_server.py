@@ -805,8 +805,8 @@ async def get_signals_api(spec: str, max_results: int = 10):
         
         # Create request object
         request = GetSignalsRequest(
-            query=spec,
-            max_results=max_results,
+            signal_spec=spec,
+            deliver_to={"platforms": "all", "countries": ["US"]},
             filters={}
         )
         
