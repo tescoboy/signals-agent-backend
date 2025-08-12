@@ -242,6 +242,9 @@ def basic_text_matching(signal_spec: str, segments: List[Dict], max_results: int
     return [segment for score, segment in scored_segments[:max_results]]
 
 
+
+
+
 def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: int = 5) -> tuple[List[Dict], str]:
     """Use Gemini to intelligently rank signals based on the specification."""
     if not segments:
@@ -297,6 +300,60 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
     
     If no segments are reasonably relevant, return an empty array.
     """
+    
+    try:
+        import time
+        import concurrent.futures
+        
+        start_time = time.time()
+        
+        # Run AI call with timeout using ThreadPoolExecutor
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(model.generate_content, prompt)
+            try:
+                response = future.result(timeout=60)  # 60 second timeout
+            except concurrent.futures.TimeoutError:
+                console.print("[yellow]AI ranking timed out after 60 seconds, using basic text matching[/yellow]")
+                return basic_text_matching(signal_spec, segments, max_results), "text_matching_timeout"
+        
+        end_time = time.time()
+        console.print(f"[dim]AI ranking took {end_time - start_time:.2f} seconds[/dim]")
+        
+        clean_json_str = response.text.strip().replace("```json", "").replace("```", "").strip()
+        
+        # Clean up any invalid characters that might cause JSON parsing issues
+        import re
+        clean_json_str = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', clean_json_str)
+        
+        ai_rankings = json.loads(clean_json_str)
+        
+        # Reorder segments based on AI ranking
+        ranked_segments = []
+        for ranking in ai_rankings:
+            segment_id = ranking.get("segment_id")
+            match_reason = ranking.get("match_reason", "Relevant to your query")
+            
+            # Find the matching segment
+            for segment in segments:
+                if segment["id"] == segment_id:
+                    # Add the match reason to the segment
+                    segment_copy = segment.copy()
+                    segment_copy["match_reason"] = match_reason
+                    ranked_segments.append(segment_copy)
+                    break
+        
+        # If AI ranking found segments, return them (limited to max_results)
+        if ranked_segments:
+            return ranked_segments[:max_results], "ai_ranking"
+        else:
+            # If AI ranking returned empty, fall back to basic matching
+            console.print("[yellow]AI ranking returned no matches, using basic text matching[/yellow]")
+            return basic_text_matching(signal_spec, segments, max_results), "text_matching_fallback"
+        
+    except Exception as e:
+        console.print(f"[yellow]AI ranking failed ({e}), using basic text matching[/yellow]")
+        # Fallback to basic text matching
+        return basic_text_matching(signal_spec, segments, max_results), "text_matching_fallback"
     
     try:
         # Set a longer timeout for AI ranking (60 seconds)
@@ -575,10 +632,8 @@ def get_signals(
             query += " AND coverage_percentage >= ?"
             params.append(filters.min_coverage_percentage)
     
-    # Removed text filtering - let AI handle all ranking
-    # Optimize for Render timeout - limit segments sent to AI
-    query += f" ORDER BY id LIMIT ?"
-    params.append(50)  # Limit to 50 segments for faster AI processing on Render
+    # Get ALL segments for AI ranking - no limit
+    query += f" ORDER BY id"
     
     cursor.execute(query, params)
     db_segments = [dict(row) for row in cursor.fetchall()]

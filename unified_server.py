@@ -63,20 +63,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# Add timeout middleware for long-running requests
-@app.middleware("http")
-async def timeout_middleware(request: Request, call_next):
-    """Add timeout handling for long-running requests."""
-    import asyncio
-    try:
-        # Set a 25-second timeout for all requests (within Render's limits)
-        response = await asyncio.wait_for(call_next(request), timeout=25.0)
-        return response
-    except asyncio.TimeoutError:
-        return JSONResponse(
-            status_code=408,
-            content={"error": "Request timeout - AI ranking is taking longer than expected"}
-        )
+
 
 
 # ===== Shared Business Logic =====
