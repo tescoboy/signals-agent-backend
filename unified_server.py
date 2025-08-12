@@ -830,18 +830,16 @@ async def get_signals_api(spec: str, max_results: int = 10, principal_id: str = 
             logger.info(f"Business logic result type: {type(result)}")
             logger.info(f"Business logic result: {result}")
             
-            # Convert to list of signals
+            # Return the full response object to include ranking_method and custom_segment_proposals
             if hasattr(result, 'signals'):
-                signals = result.signals
-                logger.info(f"Found {len(signals)} signals in result.signals")
-                return signals
+                logger.info(f"Found {len(result.signals)} signals in result.signals")
+                return result
             elif isinstance(result, dict) and 'signals' in result:
-                signals = result['signals']
-                logger.info(f"Found {len(signals)} signals in result['signals']")
-                return signals
+                logger.info(f"Found {len(result['signals'])} signals in result['signals']")
+                return result
             else:
                 logger.warning(f"No signals found in result: {result}")
-                return []
+                return {"signals": [], "ranking_method": "unknown"}
                 
         except Exception as business_error:
             logger.error(f"Business logic error: {business_error}")
