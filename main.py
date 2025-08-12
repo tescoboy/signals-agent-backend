@@ -191,6 +191,53 @@ def generate_discovery_message(signal_spec: str, signals: List[SignalResponse],
     return " ".join(message_parts)
 
 
+def basic_text_matching(signal_spec: str, segments: List[Dict], max_results: int = 5) -> List[Dict]:
+    """Basic text matching fallback when AI ranking is not available."""
+    if not segments:
+        return []
+    
+    # Convert query to lowercase for matching
+    query_lower = signal_spec.lower()
+    query_words = set(query_lower.split())
+    
+    # Score each segment based on text matching
+    scored_segments = []
+    for segment in segments:
+        score = 0
+        
+        # Check segment name
+        name_lower = segment.get("name", "").lower()
+        name_words = set(name_lower.split())
+        score += len(query_words.intersection(name_words)) * 3  # Name matches are worth more
+        
+        # Check segment description
+        desc_lower = segment.get("description", "").lower()
+        desc_words = set(desc_lower.split())
+        score += len(query_words.intersection(desc_words)) * 2  # Description matches
+        
+        # Check for exact phrase matches
+        if any(word in name_lower for word in query_words):
+            score += 2
+        if any(word in desc_lower for word in query_words):
+            score += 1
+            
+        # Bonus for luxury/automotive related queries
+        if any(word in query_lower for word in ["luxury", "auto", "automotive", "car", "vehicle"]):
+            if any(word in name_lower or word in desc_lower for word in ["luxury", "auto", "automotive", "car", "vehicle"]):
+                score += 5
+                
+        # Bonus for sports related queries
+        if any(word in query_lower for word in ["sports", "athletic", "fitness", "running"]):
+            if any(word in name_lower or word in desc_lower for word in ["sports", "athletic", "fitness", "running"]):
+                score += 5
+        
+        scored_segments.append((score, segment))
+    
+    # Sort by score (highest first) and return top results
+    scored_segments.sort(key=lambda x: x[0], reverse=True)
+    return [segment for score, segment in scored_segments[:max_results]]
+
+
 def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: int = 5) -> tuple[List[Dict], str]:
     """Use Gemini to intelligently rank signals based on the specification."""
     if not segments:
@@ -270,12 +317,12 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
         else:
             # If AI ranking returned empty, fall back to basic matching
             console.print("[yellow]AI ranking returned no matches, using basic text matching[/yellow]")
-            return segments[:max_results], "text_matching_fallback"
+            return basic_text_matching(signal_spec, segments, max_results), "text_matching_fallback"
         
     except Exception as e:
         console.print(f"[yellow]AI ranking failed ({e}), using basic text matching[/yellow]")
         # Fallback to basic text matching
-        return segments[:max_results], "text_matching_fallback"
+        return basic_text_matching(signal_spec, segments, max_results), "text_matching_fallback"
 
 
 def generate_custom_segment_proposals(signal_spec: str, existing_segments: List[Dict]) -> List[Dict]:

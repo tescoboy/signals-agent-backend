@@ -785,7 +785,7 @@ async def health_check():
 # ===== API Endpoints =====
 
 @app.get("/api/signals")
-async def get_signals_api(spec: str, max_results: int = 10):
+async def get_signals_api(spec: str, max_results: int = 10, principal_id: str = None):
     """Simple API endpoint for signals search."""
     try:
         logger.info(f"API signals called with spec: '{spec}', max_results: {max_results}")
@@ -807,7 +807,8 @@ async def get_signals_api(spec: str, max_results: int = 10):
         request = GetSignalsRequest(
             signal_spec=spec,
             deliver_to={"platforms": "all", "countries": ["US"]},
-            filters={}
+            filters={},
+            principal_id=principal_id
         )
         
         logger.info(f"Created request: {request}")
