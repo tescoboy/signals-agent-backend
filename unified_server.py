@@ -415,7 +415,7 @@ async def handle_a2a_task(request: Dict[str, Any]):
                 signal_spec=query,
                 deliver_to=params.get("deliver_to", {"platforms": "all", "countries": ["US"]}),
                 filters=params.get("filters"),
-                max_results=params.get("max_results", 10),
+                max_results=params.get("max_results", 5),
                 principal_id=params.get("principal_id")
             )
             

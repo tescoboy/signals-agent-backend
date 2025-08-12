@@ -99,7 +99,7 @@ class GetSignalsRequest(BaseModel):
         description="Optional filters to refine results"
     )
     max_results: Optional[int] = Field(
-        10,
+        5,
         description="Maximum number of signals to return",
         ge=1,
         le=100
@@ -137,6 +137,10 @@ class GetSignalsResponse(BaseModel):
     clarification_needed: Optional[str] = Field(
         None,
         description="Indicates if additional clarification would improve results"
+    )
+    ranking_method: Optional[str] = Field(
+        default=None,
+        description="Method used for ranking signals: 'ai_ranking' or 'text_matching_fallback'"
     )
 
 

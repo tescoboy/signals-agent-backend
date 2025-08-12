@@ -121,7 +121,7 @@ class SignalsA2AServer:
             signal_spec=params.get('query', ''),
             deliver_to=params.get('deliver_to', {'platforms': 'all', 'countries': ['US']}),
             filters=params.get('filters'),
-            max_results=params.get('max_results', 10),
+                            max_results=params.get('max_results', 5),
             principal_id=params.get('principal_id')
         )
         

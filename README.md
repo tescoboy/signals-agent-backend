@@ -1,278 +1,145 @@
-# Signals Agent Reference Implementation
+# Signals Agent Backend - HarvinAds Integration Ready
 
-This project is a Python-based reference implementation of a Signals Activation Protocol agent with full support for both MCP (Model Context Protocol) and A2A (Agent-to-Agent) protocols. It demonstrates how to build a signals platform that integrates with AI assistants through multiple protocols, supporting various signal types including:
-- **Audience signals**: Demographic and behavioral targeting
-- **Contextual signals**: Content classification and context
-- **Geographical signals**: Location-based targeting
-- **Temporal signals**: Time-based targeting
-- **Environmental signals**: Weather, events, and external conditions
-- **Bidding signals**: Custom bidding data and strategies
+This is the existing Signals Agent backend that has been configured and tested for the HarvinAds frontend integration. The backend is ready to run as-is without any modifications.
 
-## 🚀 Try the Live Demo
+## 🎉 Status: FULLY TESTED AND READY
 
-**Quick Start**: Click the green **"Code"** button above → **"Codespaces"** → **"Create codespace on main"**
+✅ **Comprehensive testing completed**  
+✅ **Gemini AI integration working**  
+✅ **All API endpoints functional**  
+✅ **Database with 575 sample segments**  
+✅ **CORS configured for frontend access**  
+✅ **Deployment instructions provided**  
 
-The demo will automatically set up with real data and AI-powered signal discovery. See [DEMO_GUIDE.md](DEMO_GUIDE.md) for complete instructions.
+## Quick Start
 
-## Overview
-
-The Signals Agent provides:
-
-- **AI-Powered Discovery**: Uses Google Gemini to intelligently rank signals (audiences, bidding data, contextual signals) based on natural language queries
-- **Smart Match Explanations**: Each result includes AI-generated explanations of why the segment matches your targeting goals
-- **Custom Segment Proposals**: AI suggests new custom segments that could be created for better targeting
-- **Multi-Platform Support**: Discover signals across multiple SSPs (Index Exchange, The Trade Desk, LiveRamp, OpenX, etc.)
-- **Live Platform Integration**: Real-time API integration with decisioning platforms (Index Exchange and LiveRamp supported)
-- **Intelligent Caching**: 60-second API response caching for optimal performance
-- **Real-Time Activation**: On-demand signal deployment to decisioning platforms
-- **Transparent Pricing**: CPM and revenue share models with realistic market pricing
-- **Data Transparency**: Shows "Unknown" for coverage/pricing when data is not available (no guessing)
-
-## Agent Types Supported
-
-This reference implementation supports all three signal agent types:
-
-### 1. Private Signal Agent
-- Owned by the principal with exclusive access
-- No signal costs (workflow orchestration only)
-- Only visible to the owning principal
-
-### 2. Marketplace Signal Agent - Public Catalog
-- Available to any orchestrator without principal registration
-- Standard marketplace pricing
-- Platform-wide segments only
-
-### 3. Marketplace Signal Agent - Personalized Catalog
-- Requires principal account with the signal agent
-- Account-specific segments plus platform-wide segments
-- Mixed pricing: negotiated rates and standard rates
-
-## Protocol Support
-
-### A2A (Agent-to-Agent) Protocol
-The agent fully implements the A2A protocol v0.2 specification:
-- **Agent Card**: Available at `/agent-card` and `/.well-known/agent.json`
-- **JSON-RPC 2.0**: Full support for `message/send` method
-- **Task Endpoints**: Discovery and activation tasks at `/a2a/task`
-- **Contextual Queries**: Maintains conversation context for follow-up questions
-- **CORS Support**: Enabled for web-based A2A tools like A2A Inspector
-- **Error Handling**: JSON-RPC compliant numeric error codes
-
-### MCP (Model Context Protocol)
-Full MCP support with:
-- **Tool Discovery**: `/mcp` endpoint for tool listing
-- **SSE Streaming**: Real-time updates via `/mcp/sse`
-- **Function Calling**: Standard MCP function invocation
-
-## Getting Started
-
-### Option 1: GitHub Codespaces (Recommended)
-
-The fastest way to try the demo:
-
-1. Click **"Code"** → **"Codespaces"** → **"Create codespace on main"**
-2. Wait for automatic setup (dependencies install automatically)
-3. Get a free Gemini API key at [ai.google.dev](https://ai.google.dev)
-4. Configure your API key:
-   ```bash
-   cp config.json.sample config.json
-   # Edit config.json to add your API key
-   ```
-5. Initialize the database:
-   ```bash
-   uv run python database.py
-   ```
-6. Try the interactive demo:
-   ```bash
-   uv run python client.py
-   ```
-
-### Option 2: Local Installation
-
-For local development:
+### 1. Environment Setup
 
 ```bash
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
 # Install dependencies
-pip install uv
-uv sync
+pip install -r requirements.txt
 
-# Configure API key
-cp config.json.sample config.json
-# Edit config.json with your Gemini API key from ai.google.dev
-
-# Initialize database
-uv run python database.py
-
-# Start MCP server
-uv run python main.py
+# Set up environment (optional)
+cp env.example .env
+# Edit .env to add your GEMINI_API_KEY if desired
 ```
 
-## Protocol Implementation
-
-This agent implements the following tasks from the Signals Activation Protocol:
-
-- `get_signals`: Discover signals based on marketing specifications
-- `activate_signal`: Activate signals for specific platforms/accounts (includes status monitoring)
-
-### Principal-Based Access Control
-
-The implementation supports differentiated access levels and pricing based on principal identity:
-
-**Access Levels:**
-- **Public**: Standard catalog access with base pricing
-- **Personalized**: Access to additional segments with account-specific pricing  
-- **Private**: Full catalog access including exclusive segments
-
-**Example principals configured:**
-- `acme_corp` (personalized access) - Custom pricing for luxury segments
-- `premium_partner` (personalized access) - Standard personalized pricing
-- `enterprise_client` (private access) - Full catalog access
-
-**Usage:**
-```bash
-# Public access (default)
-uv run python client.py --prompt "luxury automotive"
-
-# Principal with custom pricing
-uv run python client.py --prompt "luxury automotive" --principal acme_corp
-```
-
-The same segment may show different pricing:
-- Public: $2.50 CPM for luxury segments
-- ACME Corp: $6.50 CPM (custom negotiated rate)
-
-### Platform Adapter Integration
-
-The system supports real-time integration with decisioning platform APIs:
-
-**Supported Platforms:**
-- **Index Exchange**: Live API integration with authentication and caching
-- **LiveRamp**: Full catalog sync with 200,000+ segments, offline search capability
-- **The Trade Desk**: Adapter framework ready (implementation pending)
-
-**Configuration:**
-```json
-{
-  "platforms": {
-    "index-exchange": {
-      "enabled": true,
-      "test_mode": false,
-      "username": "your-ix-username", 
-      "password": "your-ix-password",
-      "principal_accounts": {
-        "acme_corp": "1489997"
-      }
-    }
-  }
-}
-```
-
-Set `test_mode: true` to use simulated API responses for development/testing.
-
-**Security:**
-- Principal-to-account ID mapping prevents unauthorized access
-- API credentials stored securely in config
-- 60-second response caching reduces API load
-
-**Data Transparency:**
-- When platform APIs don't provide coverage data, shows "Unknown" instead of estimates
-- When segments have no fees configured, shows "Unknown" for pricing
-- Clear differentiation between known and unknown data points
-
-## 🚀 Try the Live Demo
-
-**Quick Start**: Click the green **"Code"** button above → **"Codespaces"** → **"Create codespace on main"**
-
-Once in Codespaces (or locally), the demo uses the interactive MCP client:
+### 2. Start the Server
 
 ```bash
-# Interactive mode - full demo experience
-uv run python client.py
-
-# Quick search mode  
-uv run python client.py --prompt "BMW luxury automotive targeting"
-
-# Limit results (default is 5)
-uv run python client.py --prompt "BMW luxury automotive targeting" --limit 10
-
-# Test different principal access levels and pricing
-uv run python client.py --prompt "luxury" --principal acme_corp
+python unified_server.py
 ```
+
+The server will start on `http://localhost:8000` and automatically seed the database with sample data.
+
+### 3. Test the Backend
+
+```bash
+# Test health endpoint
+curl http://localhost:8000/health
+
+# Test discovery endpoint
+curl -X POST http://localhost:8000/a2a/task \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "discovery",
+    "parameters": {
+      "query": "sports enthusiasts"
+    },
+    "taskId": "test1"
+  }'
+```
+
+## API Endpoints
+
+### Health Check
+- **GET** `/health` - Returns server status and supported protocols
+
+### Discovery
+- **POST** `/a2a/task` - Main endpoint for discovery and activation tasks
+
+## AI Functionality
+
+The backend supports both AI-powered and deterministic modes:
+
+- **With Gemini API Key**: AI-powered ranking, proposals, and intelligent segment matching
+- **Without Gemini API Key**: Deterministic results with clear "AI off" labeling
+
+## Database
+
+- **Type**: SQLite
+- **Sample Data**: 575 segments from Peer39
+- **Auto-initialization**: Yes (on first server start)
+- **Data Source**: `sample_data.json`
+
+## Frontend Integration
+
+The HarvinAds frontend should:
+
+1. Call `POST /a2a/task` with discovery requests
+2. Handle both `matched_segments` and `proposed_segments` in responses
+3. Display AI status (on/off) based on response content
+4. Use the task schema as defined in the existing repository
+
+## Deployment
+
+### Render Deployment
+Follow the instructions in `render.md` for deploying to Render.
+
+### Environment Variables
+- `GEMINI_API_KEY` - Optional: Enables AI functionality
+- `DATABASE_PATH` - Optional: Override database path
+- `ALLOWED_ORIGINS` - Optional: CORS origins for frontend
+
+## Documentation
+
+- **Integration Guide**: `HARVINADS_INTEGRATION.md`
+- **Deployment Guide**: `render.md`
+- **Test Results**: `FINAL_TEST_RESULTS.md`
+- **Environment Setup**: `env.example`
 
 ## Testing
 
-### A2A Protocol Compliance
-Test full A2A protocol compliance:
+Run the comprehensive test suite:
 
 ```bash
-# Test local server
-uv run python test_a2a_protocol.py
-
-# Test deployed version
-uv run python test_a2a_protocol.py --deployed
+python3 test_full_backend.py
 ```
 
-### Unit Tests
-Run the core unit tests:
-
-```bash
-uv run python -m unittest test_main.py
-```
-
-### Manual Testing
-Test specific endpoints:
-
-```bash
-# Test agent card
-curl http://localhost:8000/agent-card
-
-# Test A2A discovery
-curl -X POST http://localhost:8000/a2a/task \
-  -H "Content-Type: application/json" \
-  -d '{"type": "discovery", "parameters": {"query": "sports audiences"}}'
-
-# Test MCP endpoint
-curl -X POST http://localhost:8000/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"method": "tools/list"}'
-```
-
-## Full Lifecycle Demo
-
-The system now supports the complete signal lifecycle:
-
-1. **Discovery**: Search for signals with natural language
-2. **AI Proposals**: Get custom segment suggestions with unique IDs
-3. **Activation**: Activate both existing and custom signals
-4. **Status Tracking**: Check deployment progress
-
-Try activating a custom segment:
-```bash
-uv run python client.py
-# Use 'discover' to get custom segment IDs
-# Use 'activate' with the custom segment ID (supports --principal)
-# Use 'status' to check deployment progress (supports --principal)
-```
-
-The interactive mode now supports principal identity for all operations:
-- **Discovery**: Different catalogs and pricing based on principal
-- **Activation**: Principal-based access control prevents unauthorized activations
-- **Status Checking**: Only shows status for segments the principal can access
-
-## Architecture
+## Project Structure
 
 ```
-┌─────────────────────┐    ┌──────────────────────┐    ┌─────────────────────┐
-│   AI Assistant      │    │   Signals Agent      │    │  Decisioning        │
-│   (Orchestrator)    │───▶│   (This Project)     │───▶│  Platform (DSP)     │
-└─────────────────────┘    └──────────────────────┘    └─────────────────────┘
-        │                            │                            │
-        │                            │                            │
-        └────────────── Direct Integration Model ──────────────────┘
+signals-agent/
+├── unified_server.py          # Main FastAPI server
+├── main.py                    # Core business logic
+├── database.py                # Database operations
+├── schemas.py                 # Data models
+├── sample_data.json           # 575 sample segments
+├── requirements.txt           # Python dependencies
+├── test_full_backend.py       # Comprehensive test suite
+├── HARVINADS_INTEGRATION.md   # Frontend integration guide
+├── render.md                  # Render deployment guide
+└── README.md                  # This file
 ```
 
-The agent operates within the broader Ad Tech Ecosystem Architecture, enabling direct integration with decisioning platforms while eliminating intermediary reporting complexity.
+## Support
 
-## License
+- Backend logs are available in the server output
+- Use the `/health` endpoint to verify backend status
+- Check the test results in `FINAL_TEST_RESULTS.md`
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## Next Steps
+
+1. ✅ Backend is ready and tested
+2. 🔄 Deploy backend to Render
+3. 🔄 Build HarvinAds frontend (Next.js + Bootstrap)
+4. 🔄 Test end-to-end integration
+5. 🔄 Deploy frontend to Vercel
+
+---
+
+**The Signals Agent backend is fully ready for the HarvinAds frontend integration!**

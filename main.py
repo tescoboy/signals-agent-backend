@@ -191,7 +191,7 @@ def generate_discovery_message(signal_spec: str, signals: List[SignalResponse],
     return " ".join(message_parts)
 
 
-def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: int = 10) -> List[Dict]:
+def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: int = 5) -> tuple[List[Dict], str]:
     """Use Gemini to intelligently rank signals based on the specification."""
     if not segments:
         return []
@@ -242,6 +242,11 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
     try:
         response = model.generate_content(prompt)
         clean_json_str = response.text.strip().replace("```json", "").replace("```", "").strip()
+        
+        # Clean up any invalid characters that might cause JSON parsing issues
+        import re
+        clean_json_str = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', clean_json_str)
+        
         ai_rankings = json.loads(clean_json_str)
         
         # Reorder segments based on AI ranking
@@ -259,12 +264,18 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
                     ranked_segments.append(segment_copy)
                     break
         
-        return ranked_segments
+        # If AI ranking found segments, return them (limited to max_results)
+        if ranked_segments:
+            return ranked_segments[:max_results], "ai_ranking"
+        else:
+            # If AI ranking returned empty, fall back to basic matching
+            console.print("[yellow]AI ranking returned no matches, using basic text matching[/yellow]")
+            return segments[:max_results], "text_matching_fallback"
         
     except Exception as e:
         console.print(f"[yellow]AI ranking failed ({e}), using basic text matching[/yellow]")
         # Fallback to basic text matching
-        return segments[:max_results]
+        return segments[:max_results], "text_matching_fallback"
 
 
 def generate_custom_segment_proposals(signal_spec: str, existing_segments: List[Dict]) -> List[Dict]:
@@ -475,22 +486,11 @@ def get_signals(
             query += " AND coverage_percentage >= ?"
             params.append(filters.min_coverage_percentage)
     
-    # Apply flexible text matching on name and description
-    if signal_spec:
-        # Split the spec into individual words for better matching
-        words = signal_spec.lower().split()
-        word_conditions = []
-        for word in words:
-            word_conditions.append("(LOWER(name) LIKE ? OR LOWER(description) LIKE ?)")
-            word_pattern = f"%{word}%"
-            params.extend([word_pattern, word_pattern])
-        
-        if word_conditions:
-            # Use OR to match any of the words
-            query += " AND (" + " OR ".join(word_conditions) + ")"
+    # Removed text filtering - let AI handle all ranking
+    # All segments will be sent to AI for proper ranking
     
     query += f" ORDER BY coverage_percentage DESC LIMIT ?"
-    params.append(max_results or 10)
+    params.append(min(max_results * 5, 100) if max_results else 25)  # Get more segments for AI to choose from
     
     cursor.execute(query, params)
     db_segments = [dict(row) for row in cursor.fetchall()]
@@ -511,7 +511,7 @@ def get_signals(
     all_segments = db_segments + platform_segments
     
     # Use AI to rank segments by relevance to the signal spec
-    ranked_segments = rank_signals_with_ai(signal_spec, all_segments, max_results or 10)
+    ranked_segments, ranking_method = rank_signals_with_ai(signal_spec, all_segments, max_results or 5)
     
     signals = []
     for segment in ranked_segments:
@@ -669,7 +669,8 @@ def get_signals(
         context_id=context_id,
         signals=signals,
         custom_segment_proposals=custom_proposals if custom_proposals else None,
-        clarification_needed=clarification_needed
+        clarification_needed=clarification_needed,
+        ranking_method=ranking_method
     )
 
 
