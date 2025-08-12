@@ -788,29 +788,27 @@ async def health_check():
 async def get_signals_api(spec: str, max_results: int = 10):
     """Simple API endpoint for signals search."""
     try:
-        # Convert GET parameters to the format expected by the business logic
-        request_data = {
-            "type": "discovery",
-            "parameters": {
-                "query": spec,
-                "filters": {}
-            },
-            "taskId": "api-signals-request"
-        }
+        # Import the business logic directly
+        from main import get_signals
+        from schemas import GetSignalsRequest
         
-        # Call the existing business logic
-        result = await handle_a2a_task(request_data)
+        # Create request object
+        request = GetSignalsRequest(
+            query=spec,
+            max_results=max_results,
+            filters={}
+        )
         
-        # Extract signals from the response
-        if isinstance(result, dict) and "status" in result:
-            status = result["status"]
-            if "message" in status and "parts" in status["message"]:
-                for part in status["message"]["parts"]:
-                    if part.get("kind") == "signals":
-                        return part.get("signals", [])
+        # Call the business logic directly
+        result = get_signals.fn(request)
         
-        # Fallback: return empty array if no signals found
-        return []
+        # Convert to list of signals
+        if hasattr(result, 'signals'):
+            return result.signals
+        elif isinstance(result, dict) and 'signals' in result:
+            return result['signals']
+        else:
+            return []
         
     except Exception as e:
         logger.error(f"API signals error: {e}")
