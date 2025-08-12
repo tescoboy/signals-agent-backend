@@ -946,22 +946,23 @@ async def _process_signals_request(spec: str, max_results: int = 10, principal_i
                 wait_time = retry_delay * (2 ** attempt)
                 logger.info(f"Retrying AI request in {wait_time} seconds", request_id=request_id)
                 time.sleep(wait_time)
+        
+        # Process the successful result
+        logger.info(f"Business logic result type: {type(result)}")
+        logger.info(f"Business logic result: {result}")
+        
+        # Return the full response object to include ranking_method and custom_segment_proposals
+        if hasattr(result, 'signals'):
+            logger.info(f"Found {len(result.signals)} signals in result.signals")
+            return result
+        elif isinstance(result, dict) and 'signals' in result:
+            logger.info(f"Found {len(result['signals'])} signals in result['signals']")
+            return result
+        else:
+            logger.warning(f"No signals found in result: {result}")
+            return {"signals": [], "ranking_method": "unknown"}
             
-            logger.info(f"Business logic result type: {type(result)}")
-            logger.info(f"Business logic result: {result}")
-            
-            # Return the full response object to include ranking_method and custom_segment_proposals
-            if hasattr(result, 'signals'):
-                logger.info(f"Found {len(result.signals)} signals in result.signals")
-                return result
-            elif isinstance(result, dict) and 'signals' in result:
-                logger.info(f"Found {len(result['signals'])} signals in result['signals']")
-                return result
-            else:
-                logger.warning(f"No signals found in result: {result}")
-                return {"signals": [], "ranking_method": "unknown"}
-                
-        except Exception as business_error:
+    except Exception as business_error:
             # Track AI request failure
             if PRODUCTION_HARDENING_AVAILABLE:
                 AI_REQUEST_COUNT.labels(status='failed').inc()
