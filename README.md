@@ -142,4 +142,4 @@ signals-agent/
 
 ---
 
-**The Signals Agent backend is fully ready for the HarvinAds frontend integration!**
+**The Signals Agent backend is fully ready for the HarvinAds frontend integration!**# Render deployment ready
