@@ -42,6 +42,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def get_signals_simple(spec: str, max_results: int = 10):
+    """Simple wrapper for the MCP get_signals function."""
+    from schemas import DeliverySpecification
+    
+    # Create a simple delivery specification for "all" platforms
+    deliver_to = DeliverySpecification(platforms="all")
+    
+    # Call the MCP function
+    result = main.get_signals(
+        signal_spec=spec,
+        deliver_to=deliver_to,
+        max_results=max_results
+    )
+    
+    return result
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle."""
@@ -93,8 +110,8 @@ async def get_signals(
     try:
         logger.info(f"Received signal request: spec='{spec}', max_results={max_results}")
         
-        # Call the main function to get signals
-        result = main.get_signals(spec, max_results)
+        # Call the simple wrapper function
+        result = get_signals_simple(spec, max_results)
         
         logger.info(f"Signal request completed successfully")
         return result
@@ -110,8 +127,8 @@ async def get_signals_post(request: GetSignalsRequest):
     try:
         logger.info(f"Received POST signal request: spec='{request.spec}', max_results={request.max_results}")
         
-        # Call the main function to get signals
-        result = main.get_signals(request.spec, request.max_results)
+        # Call the simple wrapper function
+        result = get_signals_simple(request.spec, request.max_results)
         
         logger.info(f"POST signal request completed successfully")
         return result
