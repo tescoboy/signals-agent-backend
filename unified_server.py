@@ -819,8 +819,13 @@ async def get_signals_api(spec: str, max_results: int = 10):
 
 # ===== Main =====
 
-def run_unified_server(host: str = "0.0.0.0", port: int = 8000):
+def run_unified_server(host: str = "0.0.0.0", port: int = None):
     """Run the unified server supporting both protocols."""
+    # Use PORT environment variable if available (for Render deployment)
+    if port is None:
+        import os
+        port = int(os.environ.get("PORT", 8000))
+    
     logger.info(f"Starting Unified Server on {host}:{port}")
     logger.info(f"- A2A Agent Card: http://{host}:{port}/agent-card")
     logger.info(f"- A2A Tasks: http://{host}:{port}/a2a/task")
