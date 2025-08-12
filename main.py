@@ -272,22 +272,31 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
     Available segments:
     {json.dumps(segment_data, indent=2)}
     
+    CRITICAL: Only return segments that are DIRECTLY and CLEARLY relevant to the client's request.
+    
+    For example:
+    - For "eating out" → only segments about dining, restaurants, food, urban lifestyle
+    - For "luxury cars" → only segments about automotive, luxury goods, affluent consumers
+    - For "sports" → only segments about sports, fitness, athletic activities
+    
+    DO NOT return segments that are only tangentially related or completely irrelevant.
+    
     Please:
-    1. Rank these segments by relevance to the client's request (most relevant first)
-    2. Consider all signal types - the client may benefit from multiple types
-    3. Select the top {max_results} most relevant segments
-    4. For each selected segment, provide a brief explanation of why it matches the request
+    1. Rank segments by DIRECT relevance to the client's request (most relevant first)
+    2. Only include segments with clear, direct relevance
+    3. Select the top {max_results} most relevant segments (or fewer if not enough are relevant)
+    4. For each selected segment, provide a brief explanation of why it directly matches the request
     
     Return your response as a JSON array with this structure:
     [
       {{
         "segment_id": "segment_id",
         "relevance_score": 0.95,
-        "match_reason": "Brief explanation of why this segment matches the request"
+        "match_reason": "Brief explanation of why this segment directly matches the request"
       }}
     ]
     
-    Only include segments that have at least some relevance. If none are relevant, return an empty array.
+    If no segments are directly relevant, return an empty array.
     """
     
     try:
