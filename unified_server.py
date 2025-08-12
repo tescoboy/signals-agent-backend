@@ -790,14 +790,10 @@ async def health_check():
 
 # ===== API Endpoints =====
 
-@app.post("/api/signals")
-async def get_signals_api(request: dict):
+@app.get("/api/signals")
+async def get_signals_api(spec: str, max_results: int = 10, principal_id: str = None):
     """Simple API endpoint for signals search."""
     try:
-        # Extract parameters from request
-        spec = request.get("signal_spec", "")
-        max_results = request.get("max_results", 10)
-        principal_id = request.get("principal_id", None)
         
         logger.info(f"API signals called with spec: '{spec}', max_results: {max_results}")
         
