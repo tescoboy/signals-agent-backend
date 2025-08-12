@@ -262,44 +262,25 @@ def rank_signals_with_ai(signal_spec: str, segments: List[Dict], max_results: in
         })
     
     prompt = f"""
-    You are an expert signals targeting analyst. A client has requested signals for: "{signal_spec}"
-    
-    Here are available signal segments from various providers, including different signal types:
-    - Audience signals: demographic/behavioral targeting
-    - Contextual signals: content-based targeting
-    - Geographical signals: location-based targeting
-    - Temporal signals: time-based targeting
-    - Environmental signals: weather/events/conditions
-    - Bidding signals: custom bidding strategies
-    
-    Available segments:
-    {json.dumps(segment_data, indent=2)}
-    
-    Please find segments that are RELEVANT to the client's request. Be reasonable and inclusive:
-    
-    For example:
-    - For "food and beverage" → include segments about food, beverages, dining, cooking, recipes
-    - For "eating out" → include segments about dining, restaurants, food, urban lifestyle, entertainment
-    - For "luxury cars" → include segments about automotive, luxury goods, affluent consumers
-    - For "sports" → include segments about sports, fitness, athletic activities
-    
-    Please:
-    1. Rank segments by relevance to the client's request (most relevant first)
-    2. Include segments that are reasonably related to the request
-    3. Select the top {max_results} most relevant segments
-    4. For each selected segment, provide a brief explanation of why it matches the request
-    
-    Return your response as a JSON array with this structure:
-    [
-      {{
-        "segment_id": "segment_id",
-        "relevance_score": 0.95,
-        "match_reason": "Brief explanation of why this segment matches the request"
-      }}
-    ]
-    
-    If no segments are reasonably relevant, return an empty array.
-    """
+You are an expert signals targeting analyst. A client has requested signals for: "{signal_spec}"
+
+Here are available signal segments from various providers:
+{json.dumps(segment_data, indent=2)}
+
+Please rank these segments by relevance to the client's request and select the top {max_results} most relevant segments.
+
+Return ONLY a valid JSON array with this exact structure:
+[
+  {{
+    "segment_id": "exact_segment_id_from_list",
+    "relevance_score": 0.95,
+    "match_reason": "Brief explanation of why this segment matches the request"
+  }}
+]
+
+Only include segments that are relevant to the request. If none are relevant, return an empty array [].
+Do not include any text before or after the JSON array.
+"""
     
     try:
         import time
