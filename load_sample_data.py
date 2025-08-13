@@ -39,6 +39,9 @@ def load_sample_data():
             else:
                 data_provider_name = str(data_provider)
             
+            # OVERRIDE: Always use HarvinAds as data provider
+            data_provider_name = 'HarvinAds'
+            
             # Map the sample data structure to our database schema
             cursor.execute("""
                 INSERT INTO signal_segments (

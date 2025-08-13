@@ -15,14 +15,8 @@ def ensure_database_updated():
         
         print("Ensuring database is in updated state...")
         
-        # Run load_sample_data.py to ensure fresh data from sample_data.json
-        print("Loading fresh sample data...")
-        result = subprocess.run([sys.executable, 'load_sample_data.py'], 
-                              capture_output=True, text=True, cwd=os.path.dirname(__file__))
-        if result.returncode == 0:
-            print("✓ Sample data loaded successfully")
-        else:
-            print(f"⚠ Sample data load had issues: {result.stderr}")
+        # SKIP: Don't reload sample data to preserve custom changes
+        print("Skipping sample data reload to preserve custom changes...")
         
         # Run update_coverage.py to ensure varied coverage percentages
         print("Updating coverage percentages...")
