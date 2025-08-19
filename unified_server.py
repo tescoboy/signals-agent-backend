@@ -1104,6 +1104,123 @@ async def manual_warmup():
         logger.error("Warmup failed", error=str(e))
         return {"error": str(e)}
 
+# ===== Audience Agent Integration =====
+
+@app.post("/audience-agent/signals")
+async def get_audience_agent_signals(request: Dict[str, Any]):
+    """Get signals from the audience-agent.fly.dev service."""
+    try:
+        from fastmcp.client import Client
+        import json
+        
+        # Extract parameters from request
+        signal_spec = request.get("signal_spec", request.get("query", ""))
+        deliver_to = request.get("deliver_to", {"platforms": "all", "countries": ["US"]})
+        max_results = request.get("max_results", 5)
+        principal_id = request.get("principal_id")
+        
+        # Connect to audience-agent
+        client = Client("https://audience-agent.fly.dev/mcp/")
+        
+        async with client:
+            # Call get_signals tool
+            result = await client.call_tool("get_signals", {
+                "signal_spec": signal_spec,
+                "deliver_to": deliver_to,
+                "max_results": max_results,
+                "principal_id": principal_id
+            })
+            
+            # Extract response data
+            if hasattr(result, 'structured_content') and result.structured_content:
+                response = result.structured_content
+            elif hasattr(result, 'data') and result.data:
+                response = result.data.model_dump()
+            else:
+                response = {"signals": [], "custom_segment_proposals": []}
+            
+            # Format response to match your existing API structure
+            formatted_response = {
+                "source": "audience-agent",
+                "query": signal_spec,
+                "timestamp": datetime.now().isoformat(),
+                "signals": response.get("signals", []),
+                "custom_segments": response.get("custom_segment_proposals", []),
+                "message": response.get("message", ""),
+                "context_id": response.get("context_id"),
+                "total_signals": len(response.get("signals", [])),
+                "total_custom_segments": len(response.get("custom_segment_proposals", []))
+            }
+            
+            return formatted_response
+            
+    except Exception as e:
+        logger.error(f"Audience agent request failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to get signals from audience-agent: {str(e)}"
+        )
+
+@app.post("/audience-agent/activate")
+async def activate_audience_agent_signal(request: Dict[str, Any]):
+    """Activate a signal from the audience-agent.fly.dev service."""
+    try:
+        from fastmcp.client import Client
+        
+        # Extract parameters
+        signal_id = request.get("signal_id")
+        platform = request.get("platform")
+        account = request.get("account")
+        context_id = request.get("context_id")
+        
+        if not signal_id or not platform:
+            raise HTTPException(
+                status_code=400,
+                detail="signal_id and platform are required"
+            )
+        
+        # Connect to audience-agent
+        client = Client("https://audience-agent.fly.dev/mcp/")
+        
+        async with client:
+            # Call activate_signal tool
+            result = await client.call_tool("activate_signal", {
+                "signals_agent_segment_id": signal_id,
+                "platform": platform,
+                "account": account,
+                "context_id": context_id
+            })
+            
+            # Extract response data
+            if hasattr(result, 'structured_content') and result.structured_content:
+                response = result.structured_content
+            elif hasattr(result, 'data') and result.data:
+                response = result.data.model_dump()
+            else:
+                response = {}
+            
+            # Format response
+            formatted_response = {
+                "source": "audience-agent",
+                "signal_id": signal_id,
+                "platform": platform,
+                "status": response.get("status", "unknown"),
+                "message": response.get("message", ""),
+                "platform_segment_id": response.get("decisioning_platform_segment_id"),
+                "deployed_at": response.get("deployed_at"),
+                "activation_duration": response.get("estimated_activation_duration_minutes"),
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            return formatted_response
+            
+    except Exception as e:
+        logger.error(f"Audience agent activation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to activate signal on audience-agent: {str(e)}"
+        )
+
 # ===== Main =====
 
 def run_unified_server(host: str = "0.0.0.0", port: int = None):
@@ -1122,6 +1239,8 @@ def run_unified_server(host: str = "0.0.0.0", port: int = None):
     logger.info(f"- MCP SSE: http://{host}:{port}/mcp/sse")
     logger.info(f"- Health Check: http://{host}:{port}/health")
     logger.info(f"- API Signals: http://{host}:{port}/api/signals")
+    logger.info(f"- Audience Agent Signals: http://{host}:{port}/audience-agent/signals")
+    logger.info(f"- Audience Agent Activate: http://{host}:{port}/audience-agent/activate")
     
     uvicorn.run(
         app, 
